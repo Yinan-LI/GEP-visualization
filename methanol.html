@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Methanol</title>
+
+    <script src="lib/jquery.js"></script>
+    <script src="lib/echarts.min.js"></script>
+    <script src="lib/china.js"></script>
+
+    <script type="text/javascript" src="lib/P_name.js"></script>
+    <script type="text/javascript" src="lib/P_coordinate_adj.js"></script>
+    
+    <script type="text/javascript" src="json/MB_2050BAU.js"></script>
+    <script type="text/javascript" src="json/MB_2050A.js"></script>
+    <script type="text/javascript" src="json/MB_2050B.js"></script>
+</head>
+<body>
+    <div class="wrap" style="position: relative;">
+        <div id="map" style="width: 100%; height: 900px;"></div>
+    </div>
+    
+    <script>
+    var scenario = prompt('Please enter scenario number:\n0 for 2050 business-as-usual\n1 for 2050 A nexus\n2 for 2050 B nexus');
+    switch (scenario){
+        case '0':
+            resultJson = resultJson0;
+            break;
+        case '1':
+            resultJson = resultJson1;
+            break;
+        case '2':
+            resultJson = resultJson2;
+            break;
+        default:
+            window.alert('Invalid input! Please refresh page to enter again.');
+    };
+    
+    var myChart = echarts.init(document.getElementById('map'));
+    
+    var nameMap = nameJson;
+    var geoCoordMap = coordinateJson;
+    var supplyData = resultJson.supply;
+    var capacityData = resultJson.capacity;
+    var areaData = resultJson.area;
+    var flowData = resultJson.flow;
+    var scale = resultJson.scale;
+    var title = resultJson.title;
+
+    var tech =      ['coal',    'coke-oven gas', 'natural gas', 'carbon dioxide'];
+    var colorList = ['#654321', '#b5651d',       'orange',      'green'];
+
+    var option = {
+        tooltip: {
+            trigger: 'item'
+        },
+        geo: {
+            map: 'china',
+            roam: true,
+            zoom: 1,
+            aspectScale: 0.75,
+            label: {
+                emphasis: {
+                    show: false,
+                }
+            },
+            itemStyle: {
+                normal: {
+                    areaColor: '#c9ecfe',
+                    borderColor: 'white'
+                },
+                emphasis: {
+                    areaColor: '#5d8aa8'
+                }
+            },
+            nameMap: nameMap
+        },
+        visualMap: {
+            min: 0,
+            max: scale[0],
+            left: 450,
+            show : true,
+            calculable: true,
+            seriesIndex: 0,
+            color: ['#2eb5fb','#42bcfc','#55c3fc','#68cafc','#7cd1fd','#8fd7fd','#a2defd','#b5e5fe','#c9ecfe'],
+            textStyle:{
+                color: 'black'
+            }
+        },
+        title:{
+            show: true,
+            text: 'Methanol production technologies: ' + title[0],
+            textStyle:{
+                color: 'black'
+            },
+            subtext: '\n- total methanol production = ' + title[1].toFixed(1) + ' Mt' +
+                     '\n\n- percentage of carbon utilization = ' + (title[2]*100).toFixed(1) + '%',
+            subtextStyle:{
+                color: 'black',
+                fontSize: 14
+            },
+            left: 450,
+            top: 40
+        },
+        graphic:{
+            elements:[
+                {
+                    type: 'text',
+                    left: 454.5,
+                    bottom: 180,
+                    style:{
+                        text: 'methanol production (Mt)',
+                        font: 'normal 13.5px sans-serif'
+                    }
+                }
+            ]
+        },
+        toolbox:{
+                show: true,
+                feature:{
+                    saveAsImage: {show: true, title: 'save as image'}
+                }
+        },
+        series: []
+    };
+
+    myChart.setOption(option);
+
+    function renderEachCity() {
+        var option = {
+            series: [{
+                name: 'area',
+                type: 'map',
+                map: 'china',
+                geoIndex: 0,
+                tooltip:{
+                    formatter: function(params){
+                        return
+                    }
+                },
+                data: areaData
+            },{
+                type: 'pie',
+                radius: 45,
+                center: [675,800],
+                label:{
+                    show: true,
+                    formatter: function(params){
+                        return tech[params.dataIndex];
+                    },
+                    color: 'black'
+                },
+                labelLine:{
+                    show: true,
+                    lineStyle:{
+                        color: 'gray'
+                    }
+                },
+                itemStyle:{
+                    color: function(params){
+                        return colorList[params.dataIndex];
+                    }
+                },
+                tooltip:{
+                    formatter: function(params){
+                        return
+                    }
+                },
+                animation: true,
+                data: [1,1,1,1]
+            }]
+        };
+
+        echarts.util.each(supplyData, function(dataItem, idx) {
+            
+            var geoCoord = geoCoordMap[dataItem.name];
+            var coord = myChart.convertToPixel('geo', geoCoord);
+
+            option.series.push({
+                type: 'pie',
+                // radius: Math.sqrt(dataItem.total)/scale[1],
+                radius: Math.round(dataItem.total) > 0 ? 20 : 0,
+                center: coord,
+                label:{
+                    show: false
+                },
+                labelLine:{
+                    show: false
+                },
+                itemStyle:{
+                    color: function(params){
+                        return colorList[params.dataIndex];
+                    }
+                },
+                tooltip:{
+                    formatter: function(params){
+                        return '[' + supplyData[params.seriesIndex - 2].name + '] ' + tech[params.dataIndex] + ': ' + 
+                                Math.round(params.data*10)/10.0 + ' Mt (' + params.percent + '%)'
+                    }
+                },
+                animation: false,
+                data: dataItem.value
+            });
+        });
+        console.time('a');
+        myChart.setOption(option);
+        console.timeEnd('a');
+    }
+
+    setTimeout(renderEachCity, 0);
+
+    function throttle(fn, delay, debounce) {
+
+        var currCall;
+        var lastCall = 0;
+        var lastExec = 0;
+        var timer = null;
+        var diff;
+        var scope;
+        var args;
+
+        delay = delay || 0;
+
+        function exec() {
+            lastExec = (new Date()).getTime();
+            timer = null;
+            fn.apply(scope, args || []);
+        }
+
+        var cb = function() {
+            currCall = (new Date()).getTime();
+            scope = this;
+            args = arguments;
+            diff = currCall - (debounce ? lastCall : lastExec) - delay;
+
+            clearTimeout(timer);
+
+            if (debounce) {
+                timer = setTimeout(exec, delay);
+            } else {
+                if (diff >= 0) {
+                    exec();
+                } else {
+                    timer = setTimeout(exec, -diff);
+                }
+            }
+
+            lastCall = currCall;
+        };
+
+        return cb;
+    }
+
+    var throttledRenderEachCity = throttle(renderEachCity, 0);
+    myChart.on('geoRoam', throttledRenderEachCity);
+
+    myChart.on('click', function(e){
+        if(e.componentSubType == "pie" || e.componentSubType == "map"){
+            var idx = e.componentSubType == "pie" ? e.seriesIndex - 2 : e.dataIndex
+            if (idx == -1){
+                return
+            }
+            creatWrap();
+            var divObj = document.createElement('div');
+            divObj.id = 'detail';
+            var divX = getMousePos()['x']; 
+            var divY = getMousePos()['y']; 
+            $(divObj).css({
+                'width': 450,
+                'height': 250,
+                'border': '1px solid #ccc',
+                'position': 'absolute',
+                'top': divY,
+                'left': divX
+            }).appendTo('.wrap');
+            plotBarChart(idx).on('click', function(e){
+                if (e.componentSubType == "bar"){
+                    if (flowData[idx].links.length == 0){
+                        window.alert('[' + flowData[idx].name + '] does not have any thermal power or carbon capture facilities!');
+                        return;
+                    }
+                    plotSankeyChart(idx)
+                }
+            });
+            clearWrap('.cover');
+        }
+        return;
+    });
+    
+    function getMousePos(e) {
+        var e = event || window.event;
+        var scrollX = document.documentElement.scrollLeft || document.body.scrollLeft;
+        var scrollY = document.documentElement.scrollTop || document.body.scrollTop;
+        var x = e.pageX || e.clientX + scrollX;
+        var y = e.pageY || e.clientY + scrollY;
+        return {'x': x,'y': y};
+    }
+    
+    function plotBarChart(idx) {
+        var barChart = echarts.init(document.getElementById('detail'));
+        var option = {
+            backgroundColor: 'rgba(255,255,255,.6)',
+            grid:{
+                left: 55,
+            },
+            xAxis: [
+                {
+                    type: 'category',
+                    data: ['CGT','CCT','CH4','CO2']
+                }
+            ],
+            yAxis: [
+                {
+                    splitLine: {
+                        show: false
+                    },
+                    type: 'value',
+                    min: 0,
+                    max: scale[2],
+                    name: 'methanol (Mt)',
+                    nameTextStyle:{
+                        fontStyle: 'bold'
+                    }
+                }
+            ],
+            series: [
+                {
+                    type: 'bar',
+                    barWidth: 20,
+                    itemStyle: {
+                        color: function(params){
+                            return colorList[params.dataIndex];
+                        }
+                    },
+                    label: {
+                        show: true,
+                        position: 'inside',
+                        fontSize: 6,
+                        textStyle: {
+                            color: 'black'
+                        },
+                        formatter: function(params){
+                            return Math.round(params.data) > 0 ? Math.round(params.data) : ''
+                        }
+                    },
+                    emphasis:{
+                        label:{
+                            show: true,
+                            position: 'top',
+                            fontStyle: 'bold',
+                            fontSize: 20,
+                            formatter: function(params){
+                                return Math.round(params.data)
+                            }
+                        },
+                        itemStyle:{
+                            barBorderColor: 'white',
+                            barBorderWidth: 4.5
+                        }
+                    },
+                    data: supplyData[idx].value
+                }, {
+                    type: 'bar',
+                    barWidth: 20,
+                    barGap: 0,
+                    itemStyle: {
+                        color: 'gray'
+                    },
+                    label: {
+                        show: true,
+                        position: 'inside',
+                        fontSize: 6,
+                        textStyle: {
+                            color: '#000'
+                        },
+                        formatter: function(params){
+                            if (params.name == 'CO2'){
+                                return 'N.A.'
+                            }
+                            return Math.round(params.data) > 0 ? Math.round(params.data) : ''
+                        }
+                    },
+                    emphasis:{
+                        label:{
+                            show: true,
+                            position: 'top',
+                            fontStyle: 'bold',
+                            fontSize: 20,
+                            formatter: function(params){
+                                return Math.round(params.data)
+                            }
+                        },
+                        itemStyle:{
+                            barBorderColor: 'white',
+                            barBorderWidth: 4.5
+                        }
+                    },
+                    data: capacityData[idx].value
+                }
+            ]
+        };
+        barChart.setOption(option);
+        return barChart;
+    }
+    
+    function plotSankeyChart(idx) {
+        var sankeyChart = echarts.init(document.getElementById('detail'));
+        var option = {
+            backgroundColor: 'rgba(255,255,255,.4)',
+            tooltip: {
+                trigger: 'item',
+                triggerOn: 'mousemove'
+            },
+            series: [
+                {
+                    type: 'sankey',
+                    focusNodeAdjacency: 'allEdges',
+                    layoutIterations: 0,
+                    lineStyle:{
+                        curveness: 0.5
+                    },
+                    label:{
+                        fontSize: 12
+                    },
+                    nodeGap: 20,
+                    height: 160*scale[3][idx] + 40,
+                    top: Math.min(7.5/scale[3][idx], 25).toString() + '%',
+                    tooltip:{
+                        formatter: function(params){
+                            if (params.dataType == 'node'){
+                                var nodeInfo = params.name + ': ' + Math.round(params.value*10)/10.0 + ' Mt';
+                                var fossil, biogenic, capture, utilization, methanol, storage, emission;
+                                var f_c, f_e, b_c, b_e, c_u, c_s, u_m, u_e;
+                                (function(dataItem){
+                                    for (var i = 0; i < dataItem.data.length; i++){
+                                        switch (dataItem.data[i].name){
+                                            case 'fossil':
+                                                fossil = dataItem.data[i].value;
+                                                break;
+                                            case 'biogenic':
+                                                biogenic = dataItem.data[i].value;
+                                                break;
+                                            case 'capture':
+                                                capture = dataItem.data[i].value;
+                                                break;
+                                            case 'utilization':
+                                                utilization = dataItem.data[i].value;
+                                                break;
+                                            case 'methanol':
+                                                methanol = dataItem.data[i].value;
+                                                break;
+                                            case 'storage':
+                                                storage = dataItem.data[i].value;
+                                                break;
+                                            case 'emission':
+                                                emission = dataItem.data[i].value;
+                                                break;
+                                        }
+                                    }
+                                    for (var i = 0; i < dataItem.links.length; i++){
+                                        if (dataItem.links[i].source == 'fossil' && dataItem.links[i].target == 'capture'){
+                                            f_c = dataItem.links[i].value;
+                                        } else if (dataItem.links[i].source == 'fossil' && dataItem.links[i].target == 'emission'){
+                                            f_e = dataItem.links[i].value;
+                                        } else if (dataItem.links[i].source == 'biogenic' && dataItem.links[i].target == 'capture'){
+                                            b_c = dataItem.links[i].value;
+                                        } else if (dataItem.links[i].source == 'biogenic' && dataItem.links[i].target == 'emission'){
+                                            b_e = dataItem.links[i].value;
+                                        } else if (dataItem.links[i].source == 'capture' && dataItem.links[i].target == 'utilization'){
+                                            c_u = dataItem.links[i].value;
+                                        } else if (dataItem.links[i].source == 'capture' && dataItem.links[i].target == 'storage'){
+                                            c_s = dataItem.links[i].value;
+                                        } else if (dataItem.links[i].source == 'utilization' && dataItem.links[i].target == 'methanol'){
+                                            u_m = dataItem.links[i].value;
+                                        } else if (dataItem.links[i].source == 'utilization' && dataItem.links[i].target == 'emission'){
+                                            u_e = dataItem.links[i].value;
+                                        } 
+                                    }
+                                    fossil = fossil || 0, biogenic = biogenic || 0,
+                                    capture = capture || 0, 
+                                    utilization = utilization || 0, 
+                                    methanol = methanol || 0, storage = storage || 0, emission = emission || 0;
+                                    f_c = f_c || 0, f_e = f_e || 0, 
+                                    b_c = b_c || 0, b_e = b_e || 0, 
+                                    c_u = c_u || 0, c_s = c_s || 0, 
+                                    u_m = u_m || 0, u_e = u_e || 0;
+                                })(flowData[idx]);
+                                
+                                if (params.name == 'fossil'){
+                                    nodeInfo = nodeInfo + '<br/>' +                                   
+                                    '> capture: ' + Math.round(f_c*10)/10.0 + ' Mt (' + Math.round(f_c/fossil*100*100)/100.0 + '%)<br/>' +
+                                    '> emission: ' + Math.round(f_e*10)/10.0 + ' Mt (' + Math.round(f_e/fossil*100*100)/100.0 + '%)';
+                                } else if (params.name == 'biogenic'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    '> capture: ' + Math.round(b_c*10)/10.0 + ' Mt (' + Math.round(b_c/biogenic*100*100)/100.0 + '%)<br/>'+
+                                    '> emission: ' + Math.round(b_e*10)/10.0 + ' Mt (' + Math.round(b_e/biogenic*100*100)/100.0 + '%)';
+                                } else if (params.name == 'capture'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    'fossil >: ' + Math.round(f_c*10)/10.0 + ' Mt (' + Math.round(f_c/capture*100*100)/100.0 + '%)<br/>' +
+                                    'biogenic >: ' + Math.round(b_c*10)/10.0 + ' Mt (' + Math.round(b_c/capture*100*100)/100.0 + '%)<br/>' +
+                                    '> utilization: ' + Math.round(c_u*10)/10.0 + ' Mt (' + Math.round(c_u/capture*100*100)/100.0 + '%)<br/>' +
+                                    '> storage: ' + Math.round(c_s*10)/10.0 + ' Mt (' + Math.round(c_s/capture*100*100)/100.0 + '%)';
+                                } else if (params.name == 'utilization'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    'capture >: ' + Math.round(c_u*10)/10.0 + ' Mt (' + Math.round(c_u/utilization*100*100)/100.0 + '%)<br/>' +
+                                    '> methanol: ' + Math.round(u_m*10)/10.0 + ' Mt (' + Math.round(u_m/utilization*100*100)/100.0 + '%)<br/>' +
+                                    '> emission: ' + Math.round(u_e*10)/10.0 + ' Mt (' + Math.round(u_e/utilization*100*100)/100.0 + '%)';
+                                } else if (params.name == 'emission'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    'utilization >: ' + Math.round(u_e*10)/10.0 + ' Mt (' + Math.round(u_e/emission*100*100)/100.0 + '%)<br/>' +
+                                    'fossil >: ' + Math.round(f_e*10)/10.0 + ' Mt (' + Math.round(f_e/emission*100*100)/100.0 + '%)<br/>' +
+                                    'biogenic >: ' + Math.round(b_e*10)/10.0 + ' Mt (' + Math.round(b_e/emission*100*100)/100.0 + '%)';
+                                } else if (params.name == 'storage'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    'capture >: ' + Math.round(c_s*10)/10.0 + ' Mt (' + Math.round(c_s/storage*100*100)/100.0 + '%)';
+                                } else if (params.name == 'methanol'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    'utilization >: ' + Math.round(u_m*10)/10.0 + ' Mt (' + Math.round(u_m/methanol*100*100)/100.0 + '%)';
+                                }
+                                return nodeInfo;
+                            }
+                            else{
+                                return params.data.source + ' to ' + params.data.target + ': ' + Math.round(params.value*10)/10.0 + ' Mt';
+                            }
+                        }
+                    },
+                    data: flowData[idx].data,
+                    links: flowData[idx].links
+                }
+            ]
+        };
+        sankeyChart.setOption(option, true);
+    }
+    
+    function creatWrap(){
+        var cover = document.createElement('div');
+        $(cover).addClass('cover').css({
+            width: '100%',
+            height: '100%',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            backgroundColor: 'rgba(0,0,0,.2)'
+        }).appendTo('.wrap');
+    }
+    
+    function clearWrap(id){
+        $(id).click(function(e){
+            this.remove();
+            $('#detail').remove();
+            return false;
+        });
+    }
+    </script>
+</body>
+</html>

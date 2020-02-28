@@ -1,0 +1,281 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Transmission</title>
+    <style>
+        .centerItem {
+            width:  100%;
+            height: 900px;
+            background-color: #FFFFFF;
+            margin: 0px auto 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="mapBox" class="centerItem"></div>
+
+    <script src="lib/jquery.js"></script>
+    <script src="lib/echarts.min.js"></script>
+    <script src="lib/china.js"></script>
+
+    <script type="text/javascript" src="lib/P_name.js"></script>
+    <script type="text/javascript" src="lib/P_coordinate.js"></script>
+    
+    <script type="text/javascript" src="json/EM_2050BAU.js"></script>
+    <script type="text/javascript" src="json/EM_2050A.js"></script>
+    <script type="text/javascript" src="json/EM_2050B.js"></script>
+
+    <script>
+        var scenario = prompt('Please enter scenario number:\n0 for 2050 business-as-usual\n1 for 2050 A nexus\n2 for 2050 B nexus');
+        switch (scenario){
+            case '0':
+                resultJson = resultJson0;
+                break;
+            case '1':
+                resultJson = resultJson1;
+                break;
+            case '2':
+                resultJson = resultJson2;
+                break;
+            default:
+                window.alert('Invalid input! Please refresh page to enter again.');
+        };
+        
+        var mapBoxEchart = echarts.init(document.getElementById('mapBox'));
+
+        var nameMap = nameJson;
+        var geoCoordMap = coordinateJson;
+        var LineData1 = resultJson.line1;
+        var LineData2 = resultJson.line2;
+        var LineData3 = resultJson.line3;
+        var label = resultJson.label;
+        var scale = resultJson.scale;
+        var title = resultJson.title;
+
+        var series = [];
+        
+        LineData1.forEach(
+            function(data, i){
+                series.push({
+                    name: 'grid transmission',
+                    type: 'lines',
+                    zlevel: 2,
+                    symbol: ['none', 'arrow'],
+                    symbolSize: Math.max(data.value/scale[0], 10),
+                    effect: {
+                        show: false,
+                        period: 5,
+                        trailLength: 0,
+                        symbol: 'arrow',
+                        symbolSize: 7.5,
+                        color: 'gray'
+                    },
+                    lineStyle:{
+                        color: 'darkOrange',
+                        width: data.value/scale[1],
+                        curveness: (data.from == 'LN' && data.to == 'HB') || (data.from == 'HB' && data.to == 'LN') ? 0.35 : 0,
+                        opacity: 1
+                    },
+                    label:{
+                        show: false,
+                        color: 'black',
+                        fontWeight: 'bolder',
+                        fontSize: 6,
+                        position: 'middle',
+                        formatter: function(params){
+                                return Math.round(params.value)
+                        }
+                    },
+                    emphasis:{
+                        lineStyle:{
+                            color: 'yellow'
+                        },
+                        label:{
+                            show: true,
+                            color: 'black',
+                            fontWeight: 'bold',
+                            fontSize: 20,
+                            formatter: function(params){
+                                if (Math.round(params.data.add) > 0){
+                                    return Math.round(params.value) + ' (+' + Math.round(params.data.add)  + ')'
+                                }
+                                return Math.round(params.value)
+                            }
+                        }
+                    },
+                    data: [ [{coord:geoCoordMap[data.from], value:data.value, add:data.add}, {coord:geoCoordMap[data.to]}] ]
+                })
+            }
+        );
+
+        LineData2.forEach(
+            function(data, i){
+                series.push({
+                    name: 'equivalent transmission via green methanol',
+                    type: 'lines',
+                    zlevel: 1,
+                    symbol: ['none', 'arrow'],
+                    symbolSize: Math.max(data.value/scale[0], 11),
+                    lineStyle:{
+                        color: 'green',
+                        width: data.value/scale[1],
+                        curveness: (data.from == 'LN' && data.to == 'HB') || (data.from == 'HB' && data.to == 'LN') ? 0.35 : 0,
+                        opacity: 1
+                    },
+                    data: [ [{coord:geoCoordMap[data.from], value:data.value}, {coord:geoCoordMap[data.to]}] ]
+                })
+            }
+        );
+
+        LineData3.forEach(
+            function(data, i){
+                series.push({
+                    name: 'equivalent transmission via green methanol',
+                    type: 'lines',
+                    zlevel: 1,
+                    symbol: ['none', 'arrow'],
+                    symbolSize: Math.max(data.value/scale[0], 10),
+                    effect: {
+                        show: false,
+                        period: 5,
+                        trailLength: 0,
+                        symbol: 'arrow',
+                        symbolSize: 7.5,
+                        color: 'gray'
+                    },
+                    lineStyle:{
+                        color: 'green',
+                        width: data.value/scale[1],
+                        curveness: (data.from == 'LN' && data.to == 'HB') || (data.from == 'HB' && data.to == 'LN') ? 0.35 : 0,
+                        opacity: 1
+                    },
+                    label:{
+                        show: false,
+                        color: 'black',
+                        fontWeight: 'bolder',
+                        fontSize: 6,
+                        position: 'middle',
+                        formatter: function(params){
+                                return Math.round(params.value)
+                        }
+                    },
+                    emphasis:{
+                        lineStyle:{
+                            color: 'yellow'
+                        },
+                        label:{
+                            show: true,
+                            color: 'black',
+                            fontWeight: 'bold',
+                            fontSize: 20,
+                            formatter: function(params){
+                                return Math.round(params.value)
+                            }
+                        }
+                    },
+                    data: [ [{coord:geoCoordMap[data.from], value:data.value}, {coord:geoCoordMap[data.to]}] ]
+                })
+            }
+        );
+
+        label.forEach(
+            function(data){
+                series.push({
+                    name: 'label',
+                    type: 'scatter',
+                    symbol: 'circle',
+                    symbolSize: 1.5e-45,
+                    coordinateSystem: 'geo',
+                    zlevel: 3,
+                    label: {
+                        show: true,
+                        color: 'black',
+                        fontSize: 14,
+                        formatter: function(params){
+                                return params.data.name
+                        }
+                    },
+                    data: [ {name:data.name, value:geoCoordMap[data.name].concat([data.value])} ]
+                })
+            }
+        );
+
+        
+        var option = {
+            geo: {
+                map: 'china',
+                show: true,
+                aspectScale: 0.75,
+                zoom: 1,
+                label: {
+                    emphasis:{
+                        show: false,
+                    }
+                },
+                itemStyle:{
+                    normal:{
+                        areaColor: 'lightGray',
+                        borderColor: 'white',                       
+                    },
+                    emphasis:{
+                        areaColor: 'lightGray'
+                    }
+                },
+            },
+            title:{
+                show: true,
+                text: 'Electricity and green methanol transmission: ' + title[0],
+                textStyle:{
+                    color: 'black'
+                },
+                subtext: '\n- total grid transmission = ' + title[1].toFixed(1) + ' TWh' + 
+                         '\n\n- total equivalent transmission via green methanol = ' + title[2].toFixed(1) + ' TWh',
+                subtextStyle:{
+                    color: 'black',
+                    fontSize: 14
+                },
+                left: 450,
+                top: 40
+            },
+            legend:{
+                show: true,
+                left: 450,
+                bottom: 100,
+                data: [
+                    {
+                        name: 'grid transmission',
+                        icon: 'rect'
+                    },{
+                        name: 'equivalent transmission via green methanol',
+                        icon: 'rect'
+                    }
+                ],
+                textStyle:{
+                    color: 'black',
+                    fontSize: 12.5
+                },
+                orient: 'vertical'
+            },
+            toolbox:{
+                show: true,
+                feature:{
+                    saveAsImage: {show: true, title: 'save as image'}
+                }
+            },
+            series: series
+        };
+        
+        mapBoxEchart.setOption(option);
+        
+        window.addEventListener("resize", function() {
+            mapBoxEchart.resize();
+        });
+    </script>
+
+</body>
+
+</html>

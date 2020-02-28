@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pareto front</title>
+
+    <script src="lib/jquery.js"></script>
+    <script src="lib/echarts.min.js"></script>
+    
+    <script type="text/javascript" src="json/TO_result.js"></script>
+</head>
+<body>
+    <div class="wrap" style="position: relative;">
+        <div id="line" style="width: 100%; height: 900px;"></div>
+    </div>
+    
+    <script>
+
+    var myChart = echarts.init(document.getElementById('line'));
+    
+    var line0 = resultJson.line0;
+    var line1 = resultJson.line1;
+    var line2 = resultJson.line2;
+    var result0 = resultJson.result0;
+    var result1 = resultJson.result1;
+    var result2 = resultJson.result2;
+
+    var E_tech =      ['coal',    'coal-CCS', 'natural gas', 'natural gas-CCS', 'nuclear', 'hydro',   'wind',    'solar',   'biomass', 'BECCS'];
+    var E_colorList = ['#546570', '#8e8e8e',  '#c23531',     '#d48265',         '#913d88', '#61a0a8', '#c4ccd3', '#f7ca18', '#749f83', '#91c7ae'];
+
+    var M_tech =      ['coal',    'coke-oven gas', 'natural gas', 'carbon dioxide'];
+    var M_colorList = ['#654321', '#b5651d',       'orange',      'green'];
+
+    var option = {
+        legend:{
+            show: true,
+            left: 1550,
+            top: 60,
+            data: [
+                {
+                    name: '2050 BAU',
+                },{
+                    name: '2050 A nexus',
+                },{
+                    name: '2050 B nexus',
+                }
+            ],
+            textStyle:{
+                color: 'black',
+                fontSize: 14
+            },
+            orient: 'vertical'
+        },
+        toolbox:{
+            show: true,
+            feature:{
+                saveAsImage: {show: true, title: 'save as image'}
+            }
+        },
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross',
+                axis: 'x',
+                lineStyle:{
+                    type: 'solid',
+                    color: 'gray'
+                },
+                crossStyle:{
+                    type: 'solid',
+                    color: 'gray'
+                },
+                label:{
+                    formatter: function(params){
+                        return params.value.toFixed(2)
+                    }
+                }
+            },
+            formatter: function(params){
+                var text = ''
+                params.forEach(function(item, idx){
+                    text = text + item.marker + item.seriesName + ':<br/>' +
+                                  '- cost = ' + item.data[1].toFixed(1) + ' billion RMB<br/>' +
+                                  '- transgression = ' + item.data[0].toFixed(1) + '<br/>'
+                })
+                return text
+            }
+        },
+        grid:{
+            width: '75%',
+            left: '5%',
+            top: 60
+        },
+        xAxis: [{
+            name: 'transgression',
+            nameLocation: 'middle',
+            nameTextStyle:{
+                fontSize: 16
+            },
+            nameGap: 30,
+            type: 'value',
+            min: 0,
+            max: 2000,
+            interval: 200,
+            axisLabel:{
+                formatter: function(value, idx){
+                    return value
+                }
+            },
+            splitLine:{
+                lineStyle:{
+                    type: 'dashed',
+                    color: 'gray'
+                }
+            }
+        }],
+        yAxis: [{
+            name: 'cost (billion RMB)',
+            nameLocation: 'middle',
+            nameTextStyle:{
+                fontSize: 16
+            },
+            nameGap: 60,
+            type: 'value',
+            min: 0,
+            max: 20000,
+            interval: 2000,
+            axisLabel:{
+                formatter: function(value, idx){
+                    return value
+                }
+            },
+            splitLine:{
+                lineStyle:{
+                    type: 'dashed',
+                    color: 'gray'
+                }
+            }
+        }],
+        dataZoom: [{
+            type: 'inside',
+            xAxisIndex: 0,
+            startValue: 0,
+            endValue: 1400
+        },{
+            type: 'inside',
+            yAxisIndex: 0,
+            startValue: 6000,
+            endValue: 16000
+        }],
+        series: [{
+            name: '2050 BAU',
+            type: 'line',
+            showSymbol: false,
+            symbolSize: 5,
+            lineStyle:{
+                width: 4.5
+            },
+            data: line0
+        },{
+            name: '2050 A nexus',
+            type: 'line',
+            showSymbol: false,
+            symbolSize: 5,
+            lineStyle:{
+                width: 4.5
+            },
+            data: line1
+        },{
+            name: '2050 B nexus',
+            type: 'line',
+            showSymbol: false,
+            symbolSize: 5,
+            lineStyle:{
+                width: 4.5
+            },
+            data: line2
+        }]
+    };
+
+    myChart.setOption(option);
+
+    myChart.on('click', function(e){
+        if(e.componentSubType == "line"){
+            creatWrap();
+            var divObj = document.createElement('div');
+            divObj.id = 'detail';
+            var divX = getMousePos()['x']; 
+            var divY = getMousePos()['y']; 
+            $(divObj).css({
+                'width': 450,
+                'height': 250,
+                'border': '1px solid #ccc',
+                'position': 'absolute',
+                'top': divY,
+                'left': divX
+            }).appendTo('.wrap');
+            plotPieChart(e);
+            clearWrap('.cover');
+        }
+        return;
+    });
+    
+    function showPieLegend(){
+        var series = myChart.getOption().series;
+        series.push({
+            type: 'pie',
+            radius: 50,
+            center: [1700,575],
+            label:{
+                show: true,
+                formatter: function(params){
+                    return E_tech[params.dataIndex];
+                },
+                color: 'black'
+            },
+            labelLine:{
+                show: true,
+                lineStyle:{
+                    color: 'gray'
+                }
+            },
+            itemStyle:{
+                color: function(params){
+                    return E_colorList[params.dataIndex];
+                }
+            },
+            tooltip:{
+                formatter: function(params){
+                    return
+                }
+            },
+            animation: true,
+            data: [1,1,1,1,1,1,1,1,1,1]
+        });
+        series.push({
+            type: 'pie',
+            radius: 50,
+            center: [1700,775],
+            label:{
+                show: true,
+                formatter: function(params){
+                    return M_tech[params.dataIndex];
+                },
+                color: 'black'
+            },
+            labelLine:{
+                show: true,
+                lineStyle:{
+                    color: 'gray'
+                }
+            },
+            itemStyle:{
+                color: function(params){
+                    return M_colorList[params.dataIndex];
+                }
+            },
+            tooltip:{
+                formatter: function(params){
+                    return
+                }
+            },
+            animation: true,
+            data: [1,1,1,1]
+        });
+        myChart.setOption({
+            graphic:{
+                elements:[
+                    {
+                        type: 'text',
+                        left: 1575,
+                        top: 470,
+                        style:{
+                            text: 'Electricity:',
+                            font: 'bold 14px sans-serif'
+                        }
+                    },{
+                        type: 'text',
+                        left: 1575,
+                        top: 685,
+                        style:{
+                            text: 'Methanol:',
+                            font: 'bold 14px sans-serif'
+                        }
+                    }
+                ]
+            },
+            series: series
+        });
+    }
+    
+    function removePieLegend(){
+        option.dataZoom[0].startValue = myChart.getOption().dataZoom[0].startValue
+        option.dataZoom[0].endValue = myChart.getOption().dataZoom[0].endValue
+        option.dataZoom[1].startValue = myChart.getOption().dataZoom[1].startValue
+        option.dataZoom[1].endValue = myChart.getOption().dataZoom[1].endValue
+        myChart.setOption(option, true);
+    }
+    
+    function getMousePos(e) {
+        var e = event || window.event;
+        var scrollX = document.documentElement.scrollLeft || document.body.scrollLeft;
+        var scrollY = document.documentElement.scrollTop || document.body.scrollTop;
+        var x = e.pageX || e.clientX + scrollX;
+        var y = e.pageY || e.clientY + scrollY;
+        return {'x': x,'y': y};
+    }
+    
+    function plotPieChart(e) {
+        var pieChart = echarts.init(document.getElementById('detail'));
+        var result
+        switch (e.seriesIndex){
+            case 0:
+                result = result0
+                break
+            case 1:
+                result = result1
+                break
+            case 2:
+                result = result2
+                break
+        }
+        var option = {
+            backgroundColor: 'rgba(255,255,255,.6)',
+            tooltip: {
+                trigger: 'item'
+            },
+            graphic:{
+                elements:[
+                    {
+                        type: 'text',
+                        left: 20,
+                        top: 9,
+                        style:{
+                            text: 'total cost = ' + e.data[1].toFixed(1) + ' billion RMB' + 
+                                  '\ntotal transgression = ' + e.data[0].toFixed(1),
+                            font: 'normal 14.5px sans-serif'
+                        }
+                    },{
+                        type: 'text',
+                        left: 20,
+                        top: 52.5,
+                        style:{
+                            text: 'Electricity:',
+                            font: 'bold 14px sans-serif'
+                        }
+                    },{
+                        type: 'text',
+                        left: 20,
+                        top: 54,
+                        style:{
+                            text: '\n- generation: ' + result[e.dataIndex][0]['tech'].reduce((a,b) => a + b, 0).toFixed(1) + ' TWh' + 
+                                  '\n- cost: ' + result[e.dataIndex][0]['cost'].toFixed(1) + ' billion RMB' + 
+                                  '\n- impact score: ' + result[e.dataIndex][0]['impact'].toFixed(1),
+                            font: 'normal 14.5px sans-serif'
+                        }
+                    },{
+                        type: 'text',
+                        left: 245,
+                        top: 52.5,
+                        style:{
+                            text: 'Methanol:',
+                            font: 'bold 14px sans-serif'
+                        }
+                    },{
+                        type: 'text',
+                        left: 245,
+                        top: 54,
+                        style:{
+                            text: '\n- production: ' + result[e.dataIndex][1]['tech'].reduce((a,b) => a + b, 0).toFixed(1) + ' Mt' + 
+                                  '\n- cost: ' + result[e.dataIndex][1]['cost'].toFixed(1) + ' billion RMB' + 
+                                  '\n- impact score: ' + result[e.dataIndex][1]['impact'].toFixed(1),
+                            font: 'normal 14.5px sans-serif'
+                        }
+                    },{
+                        type: 'line',
+                        shape:{
+                            x1: 0,
+                            y1: 45,
+                            x2: 450,
+                            y2: 45
+                        },
+                        style:{
+                            stroke: 'gray',
+                            lineWidth: 1.75
+                        }
+                    },{
+                        type: 'line',
+                        shape:{
+                            x1: 225,
+                            y1: 45,
+                            x2: 225,
+                            y2: 250
+                        },
+                        style:{
+                            stroke: 'gray',
+                            lineWidth: 1.75
+                        }
+                    }
+                ]
+            },
+            series: [
+                {
+                    type: 'pie',
+                    // radius: Math.sqrt(result[e.dataIndex][0]['tech'].reduce((a,b) => a + b, 0))/scale[1],
+                    radius: 60,
+                    center: [112.5,181],
+                    label:{
+                        show: false
+                    },
+                    labelLine:{
+                        show: false
+                    },
+                    itemStyle:{
+                        color: function(params){
+                            return E_colorList[params.dataIndex];
+                        }
+                    },
+                    tooltip:{
+                        formatter: function(params){
+                            return E_tech[params.dataIndex] + ': ' + params.data.toFixed(1) + ' TWh (' + params.percent.toFixed(2) + '%)'
+                        }
+                    },
+                    animation: true,
+                    data: result[e.dataIndex][0]['tech']
+                }, {
+                    type: 'pie',
+                    radius: 60,
+                    center: [337.5,181],
+                    label:{
+                        show: false
+                    },
+                    labelLine:{
+                        show: false
+                    },
+                    itemStyle:{
+                        color: function(params){
+                            return M_colorList[params.dataIndex];
+                        }
+                    },
+                    tooltip:{
+                        formatter: function(params){
+                            return M_tech[params.dataIndex] + ': ' + params.data.toFixed(1) + ' Mt (' + params.percent.toFixed(2) + '%)'
+                        }
+                    },
+                    animation: true,
+                    data: result[e.dataIndex][1]['tech']
+                }
+            ]
+        };
+        pieChart.setOption(option);
+    }
+    
+    function creatWrap(){
+        var cover = document.createElement('div');
+        $(cover).addClass('cover').css({
+            width: '100%',
+            height: '100%',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            backgroundColor: 'rgba(0,0,0,.2)'
+        }).appendTo('.wrap');
+        showPieLegend();
+    }
+    
+    function clearWrap(id){
+        $(id).click(function(e){
+            this.remove();
+            $('#detail').remove();
+            removePieLegend();
+            return false;
+        });
+    }
+    </script>
+</body>
+</html>
