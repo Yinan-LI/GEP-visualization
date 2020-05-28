@@ -9,6 +9,7 @@ To use the visualization,
       <li>pareto.html for Pareto fronts of nexus optimization</li>
    </ul></li>
    
+   
    <li>Enter a scenario number as prompted (not required for pareto.html):
    <ul>
       <li>0 for 2050 BAU</li>
@@ -16,6 +17,7 @@ To use the visualization,
       <li>2 for 2050 Nexus-v</li>
       <li>3 for 2050 Nexus-s</li>
    </ul></li>
-
+   
+   
    <li>Refresh the page to re-enter scenario number if needed.</li>
 </ol>
