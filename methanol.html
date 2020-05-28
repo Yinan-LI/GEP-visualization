@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Methanol</title>
+    <title>Methanol Breakdown</title>
 
     <script src="lib/jquery.js"></script>
     <script src="lib/echarts.min.js"></script>
@@ -11,54 +11,82 @@
     <script type="text/javascript" src="lib/P_name.js"></script>
     <script type="text/javascript" src="lib/P_coordinate_adj.js"></script>
     
-    <script type="text/javascript" src="json/MB_2050BAU.js"></script>
-    <script type="text/javascript" src="json/MB_2050A.js"></script>
-    <script type="text/javascript" src="json/MB_2050B.js"></script>
+    <script type="text/javascript" src="json/MB_result_2050BAU.js"></script>
+    <script type="text/javascript" src="json/MB_result_2050.js"></script>
+    <script type="text/javascript" src="json/MB_result_2050-v.js"></script>
+    <script type="text/javascript" src="json/MB_result_2050-s.js"></script>
 </head>
 <body>
-    <div class="wrap" style="position: relative;">
-        <div id="map" style="width: 100%; height: 900px;"></div>
-    </div>
+    <div class="wrap" style="position: relative;"></div>
     
     <script>
-    var scenario = prompt('Please enter scenario number:\n0 for 2050 business-as-usual\n1 for 2050 A nexus\n2 for 2050 B nexus');
-    switch (scenario){
+    switch (prompt('Please enter scenario number:\n0 for 2050 BAU\n1 for 2050 Nexus\n2 for 2050 Nexus-v\n3 for 2050 Nexus-s')){
         case '0':
-            resultJson = resultJson0;
-            break;
+            resultJson = resultJson0
+            break
         case '1':
-            resultJson = resultJson1;
-            break;
+            resultJson = resultJson1
+            break
         case '2':
-            resultJson = resultJson2;
-            break;
+            resultJson = resultJson2
+            break
+        case '3':
+            resultJson = resultJson3
+            break
         default:
-            window.alert('Invalid input! Please refresh page to enter again.');
-    };
+            window.alert('Invalid input! Please refresh page to enter again.')
+    }
     
-    var myChart = echarts.init(document.getElementById('map'));
-    
-    var nameMap = nameJson;
-    var geoCoordMap = coordinateJson;
-    var supplyData = resultJson.supply;
-    var capacityData = resultJson.capacity;
-    var areaData = resultJson.area;
-    var flowData = resultJson.flow;
-    var scale = resultJson.scale;
-    var title = resultJson.title;
+    const mapAspectRatio = 0.75
 
-    var tech =      ['coal',    'coke-oven gas', 'natural gas', 'carbon dioxide'];
-    var colorList = ['#654321', '#b5651d',       'orange',      'green'];
+    var windowHeight = window.innerHeight
+    var windowWidth = window.innerWidth
+    var containerHeight
+    var containerWidth
+    if (windowHeight/windowWidth > mapAspectRatio) {
+        containerWidth = windowWidth
+        containerHeight = containerWidth*mapAspectRatio
+    } else {
+        containerHeight = windowHeight
+        containerWidth = containerHeight/mapAspectRatio
+    }
+
+    const SCALING = containerHeight/722
+
+    var mapContainer = document.createElement('div')
+    mapContainer.id = 'map'
+    $(mapContainer).css({
+        'width': Math.max(windowWidth, containerWidth),
+        'height': Math.max(windowHeight, containerHeight),
+        'margin': 'auto'
+    }).appendTo('.wrap')
+
+    var myChart = echarts.init(document.getElementById('map'))
+    
+    var nameMap = nameJson
+    var geoCoordMap = coordinateJson
+
+    var supplyData = resultJson.supply
+    var capacityData = resultJson.capacity
+    var flowData = resultJson.flow
+
+    var tech =      ['Coal',    'Coke-oven gas', 'Natural gas', 'Carbon dioxide']
+    var colorList = ['#654321', '#b5651d',       'orange',      'green']
 
     var option = {
         tooltip: {
-            trigger: 'item'
+            trigger: 'item',
+            padding: SCALING*5,
+            textStyle:{
+                fontSize: SCALING*14
+            }
         },
         geo: {
             map: 'china',
             roam: true,
             zoom: 1,
-            aspectScale: 0.75,
+            aspectScale: mapAspectRatio,
+            zlevel: 1,
             label: {
                 emphasis: {
                     show: false,
@@ -66,8 +94,9 @@
             },
             itemStyle: {
                 normal: {
-                    areaColor: '#c9ecfe',
-                    borderColor: 'white'
+                    areaColor: '#dcf3fe',
+                    borderColor: 'white',
+                    borderWidth: SCALING*0.75
                 },
                 emphasis: {
                     areaColor: '#5d8aa8'
@@ -77,54 +106,99 @@
         },
         visualMap: {
             min: 0,
-            max: scale[0],
-            left: 450,
+            max: 200,
+            range: [0,40],
+            left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+            bottom: convertReferenceFrame(containerHeight, windowHeight, '2.5%'),
+            itemHeight: SCALING*160,
+            itemWidth: SCALING*20,
+            padding: 0,
             show : true,
             calculable: true,
             seriesIndex: 0,
-            color: ['#2eb5fb','#42bcfc','#55c3fc','#68cafc','#7cd1fd','#8fd7fd','#a2defd','#b5e5fe','#c9ecfe'],
+            inRange: {
+                color: ['#1baffb','#2eb5fb','#42bcfc','#55c3fc','#68cafc','#7cd1fd','#8fd7fd','#a2defd','#b5e5fe','#c9ecfe','#dcf3fe']
+                       .reverse().concat(Array(40).fill('gray'))
+            },
+            outOfRange: {
+                color: ['#ccccff','#9457eb']
+            }, 
             textStyle:{
-                color: 'black'
+                color: 'black',
+                fontSize: SCALING*12
             }
         },
         title:{
             show: true,
-            text: 'Methanol production technologies: ' + title[0],
+            text: 'Methanol: ' + resultJson.scenario,
             textStyle:{
-                color: 'black'
-            },
-            subtext: '\n- total methanol production = ' + title[1].toFixed(1) + ' Mt' +
-                     '\n\n- percentage of carbon utilization = ' + (title[2]*100).toFixed(1) + '%',
-            subtextStyle:{
                 color: 'black',
-                fontSize: 14
+                fontSize: SCALING*18
             },
-            left: 450,
-            top: 40
+            left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+            top: convertReferenceFrame(containerHeight, windowHeight, '4.5%'),
+            padding: 0
         },
         graphic:{
             elements:[
                 {
                     type: 'text',
-                    left: 454.5,
-                    bottom: 180,
+                    left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+                    bottom: convertReferenceFrame(containerHeight, windowHeight, '29.5%'),
                     style:{
-                        text: 'methanol production (Mt)',
-                        font: 'normal 13.5px sans-serif'
+                        text: 'Total production (Mt)',
+                        font: 'normal ' + SCALING*14 + 'px sans-serif'
+                    }
+                },{
+                    type: 'text',
+                    left: convertReferenceFrame(containerWidth, windowWidth, '9%'),
+                    bottom: convertReferenceFrame(containerHeight, windowHeight, '26.5%'),
+                    style:{
+                        text: '200',
+                        font: 'normal ' + SCALING*12 + 'px sans-serif'
+                    }
+                },{
+                    type: 'polygon',
+                    shape:{
+                        // points: [[354.5,532],[367,532],[367,519.5]]
+                        points: convertPointCoords(722, 1536, 722, 962.67, windowHeight, windowWidth, containerHeight, containerWidth, [[354.5,532],[367,532],[367,519.5]])
+                    },
+                    style:{
+                        fill: '#9457eb'
+                    }
+                },{
+                    type: 'text',
+                    left: convertReferenceFrame(containerWidth, windowWidth, '23.25%'),
+                    bottom: convertReferenceFrame(containerHeight, windowHeight, '9.55%'),
+                    style:{
+                        text: computeTotal(supplyData).toFixed(1) + '\n  Mt',
+                        font: 'normal ' + SCALING*15 + 'px sans-serif'
                     }
                 }
             ]
         },
-        toolbox:{
-                show: true,
-                feature:{
-                    saveAsImage: {show: true, title: 'save as image'}
-                }
+        legend: {
+            show: true,
+            data: [{name: 'Coal', icon: 'roundRect'},
+                   {name: 'Coke-oven gas', icon: 'roundRect'},
+                   {name: 'Natural gas', icon: 'roundRect'},
+                   {name: 'Carbon dioxide', icon: 'roundRect'}],
+            left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+            top: convertReferenceFrame(containerHeight, windowHeight, '10%'),
+            padding: 0,
+            itemGap: SCALING*10,
+            itemWidth: SCALING*25,
+            itemHeight: SCALING*14,
+            textStyle:{
+                color: 'black',
+                fontSize: SCALING*14
+            },
+
         },
         series: []
-    };
+    }
 
-    myChart.setOption(option);
+    myChart.setOption(option)
 
     function renderEachCity() {
         var option = {
@@ -135,52 +209,53 @@
                 geoIndex: 0,
                 tooltip:{
                     formatter: function(params){
+                        // console.log(params)
+                        // return '[' + params.name + '] production: ' + params.value.toFixed(1)
                         return
                     }
                 },
-                data: areaData
+                data: computeProvTotal(supplyData)
             },{
                 type: 'pie',
-                radius: 45,
-                center: [675,800],
+                radius: [SCALING*40, SCALING*60],
+                center: [convertReferenceFrame(containerWidth, windowWidth, '25%'), 
+                         convertReferenceFrame(containerHeight, windowHeight, '88%')],
                 label:{
-                    show: true,
-                    formatter: function(params){
-                        return tech[params.dataIndex];
-                    },
-                    color: 'black'
+                    show: false
                 },
                 labelLine:{
-                    show: true,
-                    lineStyle:{
-                        color: 'gray'
-                    }
+                    show: false
                 },
                 itemStyle:{
                     color: function(params){
-                        return colorList[params.dataIndex];
+                        return colorList[params.dataIndex]
                     }
                 },
                 tooltip:{
                     formatter: function(params){
-                        return
+                        // console.log(params)
+                        return tech[params.dataIndex] + ': ' + params.value.toFixed(1) + ' Mt (' + params.percent.toFixed(2) + '%)'
                     }
                 },
-                animation: true,
-                data: [1,1,1,1]
+                animation: false,
+                data: constructTechTotal(computeTechTotal(supplyData))
             }]
-        };
+        }
+
+        // console.log(myChart.getOption().geo[0].zoom)
+        var zoomScale = myChart.getOption().geo[0].zoom
 
         echarts.util.each(supplyData, function(dataItem, idx) {
             
-            var geoCoord = geoCoordMap[dataItem.name];
-            var coord = myChart.convertToPixel('geo', geoCoord);
+            var geoCoord = geoCoordMap[dataItem.name]
+            var coord = myChart.convertToPixel('geo', geoCoord)
 
             option.series.push({
                 type: 'pie',
                 // radius: Math.sqrt(dataItem.total)/scale[1],
-                radius: Math.round(dataItem.total) > 0 ? 20 : 0,
+                radius: Math.round(dataItem.value.reduce((tot, cur) => tot + cur, 0)) > 0 ? SCALING*16*zoomScale : 0,
                 center: coord,
+                zlevel: 2,
                 label:{
                     show: false
                 },
@@ -189,124 +264,152 @@
                 },
                 itemStyle:{
                     color: function(params){
-                        return colorList[params.dataIndex];
+                        return colorList[params.dataIndex]
                     }
                 },
                 tooltip:{
                     formatter: function(params){
+                        // console.log(params)
                         return '[' + supplyData[params.seriesIndex - 2].name + '] ' + tech[params.dataIndex] + ': ' + 
-                                Math.round(params.data*10)/10.0 + ' Mt (' + params.percent + '%)'
+                                params.data.toFixed(1) + ' Mt (' + params.percent.toFixed(2) + '%)'
                     }
                 },
                 animation: false,
                 data: dataItem.value
-            });
-        });
-        console.time('a');
-        myChart.setOption(option);
-        console.timeEnd('a');
+            })
+        })
+        console.time('a')
+        myChart.setOption(option)
+        console.timeEnd('a')
     }
 
-    setTimeout(renderEachCity, 0);
+    setTimeout(renderEachCity, 0)
+    
 
+    // 缩放和拖拽
     function throttle(fn, delay, debounce) {
 
-        var currCall;
-        var lastCall = 0;
-        var lastExec = 0;
-        var timer = null;
-        var diff;
-        var scope;
-        var args;
+        var currCall
+        var lastCall = 0
+        var lastExec = 0
+        var timer = null
+        var diff
+        var scope
+        var args
 
-        delay = delay || 0;
+        delay = delay || 0
 
         function exec() {
-            lastExec = (new Date()).getTime();
-            timer = null;
-            fn.apply(scope, args || []);
+            lastExec = (new Date()).getTime()
+            timer = null
+            fn.apply(scope, args || [])
         }
 
         var cb = function() {
-            currCall = (new Date()).getTime();
-            scope = this;
-            args = arguments;
-            diff = currCall - (debounce ? lastCall : lastExec) - delay;
+            currCall = (new Date()).getTime()
+            scope = this
+            args = arguments
+            diff = currCall - (debounce ? lastCall : lastExec) - delay
 
-            clearTimeout(timer);
+            clearTimeout(timer)
 
             if (debounce) {
-                timer = setTimeout(exec, delay);
+                timer = setTimeout(exec, delay)
             } else {
                 if (diff >= 0) {
-                    exec();
+                    exec()
                 } else {
-                    timer = setTimeout(exec, -diff);
+                    timer = setTimeout(exec, -diff)
                 }
             }
 
-            lastCall = currCall;
-        };
+            lastCall = currCall
+        }
 
-        return cb;
+        return cb
     }
 
-    var throttledRenderEachCity = throttle(renderEachCity, 0);
-    myChart.on('geoRoam', throttledRenderEachCity);
+    var throttledRenderEachCity = throttle(renderEachCity, 0)
+    myChart.on('geoRoam', throttledRenderEachCity)
 
+
+    // click pie/map to show bar plot, click bar to show sankey plot
     myChart.on('click', function(e){
+        // console.log(e)
         if(e.componentSubType == "pie" || e.componentSubType == "map"){
             var idx = e.componentSubType == "pie" ? e.seriesIndex - 2 : e.dataIndex
+            // console.log(idx)
+            var isNational = false
             if (idx == -1){
-                return
-            }
-            creatWrap();
-            var divObj = document.createElement('div');
-            divObj.id = 'detail';
-            var divX = getMousePos()['x']; 
-            var divY = getMousePos()['y']; 
-            $(divObj).css({
-                'width': 450,
-                'height': 250,
-                'border': '1px solid #ccc',
-                'position': 'absolute',
-                'top': divY,
-                'left': divX
-            }).appendTo('.wrap');
-            plotBarChart(idx).on('click', function(e){
-                if (e.componentSubType == "bar"){
-                    if (flowData[idx].links.length == 0){
-                        window.alert('[' + flowData[idx].name + '] does not have any thermal power or carbon capture facilities!');
-                        return;
-                    }
-                    plotSankeyChart(idx)
+                if (e.componentSubType == "pie"){
+                    isNational = true
                 }
-            });
-            clearWrap('.cover');
+                else{
+                    return
+                }
+            }
+            // create cover layer
+            creatWrap()
+            // create container for bar/sankey plot
+            var divObj = document.createElement('div')
+            divObj.id = 'detail'
+            var divX = getMousePos()['x']
+            var divY = getMousePos()['y']
+            $(divObj).css({
+                'width': SCALING*360,
+                'height': SCALING*200,
+                'border': SCALING*1 + 'px solid #ccc',
+                'position': 'absolute',
+                'top': isNational ? divY - SCALING*200 : divY,
+                'left': divX
+            }).appendTo('.wrap')
+            // make bar/sankey plot
+            plotBarChart(idx, isNational).on('click', function(e){
+                // console.log(e, idx)
+                if (e.componentSubType == "bar"){
+                    if (!isNational && flowData[idx].links.length == 0){
+                        window.alert('[' + flowData[idx].name + '] does not have any thermal power or carbon capture facilities!')
+                        return
+                    }
+                    plotSankeyChart(idx, isNational)
+                }
+            })
+            // remove cover layer (and detailed plot)
+            clearWrap('.cover')
         }
-        return;
-    });
-    
-    function getMousePos(e) {
-        var e = event || window.event;
-        var scrollX = document.documentElement.scrollLeft || document.body.scrollLeft;
-        var scrollY = document.documentElement.scrollTop || document.body.scrollTop;
-        var x = e.pageX || e.clientX + scrollX;
-        var y = e.pageY || e.clientY + scrollY;
-        return {'x': x,'y': y};
-    }
-    
-    function plotBarChart(idx) {
-        var barChart = echarts.init(document.getElementById('detail'));
+        return
+    })
+
+    // make bar plot
+    function plotBarChart(idx, isNational) {
+        var barChart = echarts.init(document.getElementById('detail'))
         var option = {
             backgroundColor: 'rgba(255,255,255,.6)',
             grid:{
-                left: 55,
+                left: '15%',
+                right: '10%',
+                top: '25%',
+                bottom: '15%'
             },
             xAxis: [
                 {
                     type: 'category',
-                    data: ['CGT','CCT','CH4','CO2']
+                    data: ['CGT','CCT','CH4','CO2'],
+                    axisLabel:{
+                        fontSize: SCALING*12,
+                        margin: SCALING*8
+                    },
+                    axisLine:{
+                        lineStyle:{
+                            width: SCALING*1
+                        }
+                    },
+                    axisTick:{
+                        length: SCALING*5,
+                        lineStyle:{
+                            width: SCALING*1
+                        }
+                    }
                 }
             ],
             yAxis: [
@@ -316,52 +419,71 @@
                     },
                     type: 'value',
                     min: 0,
-                    max: scale[2],
-                    name: 'methanol (Mt)',
+                    max: isNational ? 250 : 50,
+                    name: 'Methanol (Mt)',
+                    nameGap: SCALING*15,
                     nameTextStyle:{
-                        fontStyle: 'bold'
+                        fontStyle: 'bold',
+                        fontSize: SCALING*12
+                    },
+                    axisLabel:{
+                        fontSize: SCALING*12,
+                        margin: SCALING*8
+                    },
+                    axisLine:{
+                        lineStyle:{
+                            width: SCALING*1
+                        }
+                    },
+                    axisTick:{
+                        length: SCALING*5,
+                        lineStyle:{
+                            width: SCALING*1
+                        }
                     }
                 }
             ],
             series: [
                 {
                     type: 'bar',
-                    barWidth: 20,
+                    barWidth: SCALING*20,
                     itemStyle: {
                         color: function(params){
-                            return colorList[params.dataIndex];
+                            return colorList[params.dataIndex]
                         }
                     },
                     label: {
                         show: true,
                         position: 'inside',
-                        fontSize: 6,
+                        fontSize: SCALING*8,
                         textStyle: {
                             color: 'black'
                         },
                         formatter: function(params){
-                            return Math.round(params.data) > 0 ? Math.round(params.data) : ''
+                            // console.log(params)
+                            return Math.round(params.data)
                         }
                     },
                     emphasis:{
                         label:{
                             show: true,
                             position: 'top',
+                            distance: SCALING*5,
                             fontStyle: 'bold',
-                            fontSize: 20,
+                            fontSize: SCALING*20,
                             formatter: function(params){
                                 return Math.round(params.data)
                             }
                         },
                         itemStyle:{
                             barBorderColor: 'white',
-                            barBorderWidth: 4.5
+                            barBorderWidth: SCALING*4.5
                         }
                     },
-                    data: supplyData[idx].value
+                    data: isNational ? computeTechTotal(supplyData) : supplyData[idx].value
                 }, {
                     type: 'bar',
-                    barWidth: 20,
+                    barWidth: SCALING*20,
                     barGap: 0,
                     itemStyle: {
                         color: 'gray'
@@ -369,7 +491,7 @@
                     label: {
                         show: true,
                         position: 'inside',
-                        fontSize: 6,
+                        fontSize: SCALING*8,
                         textStyle: {
                             color: '#000'
                         },
@@ -377,163 +499,122 @@
                             if (params.name == 'CO2'){
                                 return 'N.A.'
                             }
-                            return Math.round(params.data) > 0 ? Math.round(params.data) : ''
+                            return Math.round(params.data)
                         }
                     },
                     emphasis:{
                         label:{
                             show: true,
                             position: 'top',
+                            distance: SCALING*5,
                             fontStyle: 'bold',
-                            fontSize: 20,
+                            fontSize: SCALING*20,
                             formatter: function(params){
                                 return Math.round(params.data)
                             }
                         },
                         itemStyle:{
                             barBorderColor: 'white',
-                            barBorderWidth: 4.5
+                            barBorderWidth: SCALING*4.5
                         }
                     },
-                    data: capacityData[idx].value
+                    data: isNational ? computeTechTotal(capacityData) : capacityData[idx].value
                 }
             ]
-        };
-        barChart.setOption(option);
-        return barChart;
+        }
+        barChart.setOption(option)
+        return barChart
     }
-    
-    function plotSankeyChart(idx) {
-        var sankeyChart = echarts.init(document.getElementById('detail'));
+    // make sankey plot
+    function plotSankeyChart(idx, isNational) {
+        var sankeyChart = echarts.init(document.getElementById('detail'))
         var option = {
             backgroundColor: 'rgba(255,255,255,.4)',
             tooltip: {
                 trigger: 'item',
-                triggerOn: 'mousemove'
+                triggerOn: 'mousemove',
+                padding: SCALING*5,
+                textStyle:{
+                    fontSize: SCALING*14
+                }
             },
             series: [
                 {
                     type: 'sankey',
                     focusNodeAdjacency: 'allEdges',
-                    layoutIterations: 0,
                     lineStyle:{
                         curveness: 0.5
                     },
                     label:{
-                        fontSize: 12
+                        distance: SCALING*5,
+                        fontSize: SCALING*12
                     },
-                    nodeGap: 20,
-                    height: 160*scale[3][idx] + 40,
-                    top: Math.min(7.5/scale[3][idx], 25).toString() + '%',
+                    nodeGap: SCALING*10,
+                    nodeWidth: SCALING*16,
+                    height: isNational ? SCALING*180 : SCALING*(160*computeRelativeScale(flowData)[idx] + 20),
+                    top: isNational ? '5%' : Math.min(5/computeRelativeScale(flowData)[idx], 20).toString() + '%',
+                    itemStyle:{
+                        borderWidth: SCALING*1
+                    },
                     tooltip:{
                         formatter: function(params){
+                            // console.log(params)
                             if (params.dataType == 'node'){
-                                var nodeInfo = params.name + ': ' + Math.round(params.value*10)/10.0 + ' Mt';
-                                var fossil, biogenic, capture, utilization, methanol, storage, emission;
-                                var f_c, f_e, b_c, b_e, c_u, c_s, u_m, u_e;
-                                (function(dataItem){
-                                    for (var i = 0; i < dataItem.data.length; i++){
-                                        switch (dataItem.data[i].name){
-                                            case 'fossil':
-                                                fossil = dataItem.data[i].value;
-                                                break;
-                                            case 'biogenic':
-                                                biogenic = dataItem.data[i].value;
-                                                break;
-                                            case 'capture':
-                                                capture = dataItem.data[i].value;
-                                                break;
-                                            case 'utilization':
-                                                utilization = dataItem.data[i].value;
-                                                break;
-                                            case 'methanol':
-                                                methanol = dataItem.data[i].value;
-                                                break;
-                                            case 'storage':
-                                                storage = dataItem.data[i].value;
-                                                break;
-                                            case 'emission':
-                                                emission = dataItem.data[i].value;
-                                                break;
-                                        }
-                                    }
-                                    for (var i = 0; i < dataItem.links.length; i++){
-                                        if (dataItem.links[i].source == 'fossil' && dataItem.links[i].target == 'capture'){
-                                            f_c = dataItem.links[i].value;
-                                        } else if (dataItem.links[i].source == 'fossil' && dataItem.links[i].target == 'emission'){
-                                            f_e = dataItem.links[i].value;
-                                        } else if (dataItem.links[i].source == 'biogenic' && dataItem.links[i].target == 'capture'){
-                                            b_c = dataItem.links[i].value;
-                                        } else if (dataItem.links[i].source == 'biogenic' && dataItem.links[i].target == 'emission'){
-                                            b_e = dataItem.links[i].value;
-                                        } else if (dataItem.links[i].source == 'capture' && dataItem.links[i].target == 'utilization'){
-                                            c_u = dataItem.links[i].value;
-                                        } else if (dataItem.links[i].source == 'capture' && dataItem.links[i].target == 'storage'){
-                                            c_s = dataItem.links[i].value;
-                                        } else if (dataItem.links[i].source == 'utilization' && dataItem.links[i].target == 'methanol'){
-                                            u_m = dataItem.links[i].value;
-                                        } else if (dataItem.links[i].source == 'utilization' && dataItem.links[i].target == 'emission'){
-                                            u_e = dataItem.links[i].value;
-                                        } 
-                                    }
-                                    fossil = fossil || 0, biogenic = biogenic || 0,
-                                    capture = capture || 0, 
-                                    utilization = utilization || 0, 
-                                    methanol = methanol || 0, storage = storage || 0, emission = emission || 0;
-                                    f_c = f_c || 0, f_e = f_e || 0, 
-                                    b_c = b_c || 0, b_e = b_e || 0, 
-                                    c_u = c_u || 0, c_s = c_s || 0, 
-                                    u_m = u_m || 0, u_e = u_e || 0;
-                                })(flowData[idx]);
-                                
+                                var nodeInfo = params.name + ': ' + params.value.toFixed(1) + ' Mt'
+                                var flowInfo = isNational ? readFlowData(computeNationalFlow(flowData)) : readFlowData(flowData[idx])
                                 if (params.name == 'fossil'){
-                                    nodeInfo = nodeInfo + '<br/>' +                                   
-                                    '> capture: ' + Math.round(f_c*10)/10.0 + ' Mt (' + Math.round(f_c/fossil*100*100)/100.0 + '%)<br/>' +
-                                    '> emission: ' + Math.round(f_e*10)/10.0 + ' Mt (' + Math.round(f_e/fossil*100*100)/100.0 + '%)';
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    '> emission: ' + flowInfo.f_e.toFixed(1) + ' Mt (' + (flowInfo.f_e/(flowInfo.f+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '> capture: ' + flowInfo.f_c.toFixed(1) + ' Mt (' + (flowInfo.f_c/(flowInfo.f+1e-10)*100).toFixed(2) + '%)'
                                 } else if (params.name == 'biogenic'){
                                     nodeInfo = nodeInfo + '<br/>' +
-                                    '> capture: ' + Math.round(b_c*10)/10.0 + ' Mt (' + Math.round(b_c/biogenic*100*100)/100.0 + '%)<br/>'+
-                                    '> emission: ' + Math.round(b_e*10)/10.0 + ' Mt (' + Math.round(b_e/biogenic*100*100)/100.0 + '%)';
+                                    '> emission: ' + flowInfo.b_e.toFixed(1) + ' Mt (' + (flowInfo.b_e/(flowInfo.b+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '> capture: ' + flowInfo.b_c.toFixed(1) + ' Mt (' + (flowInfo.b_c/(flowInfo.b+1e-10)*100).toFixed(2) + '%)'
+                                } else if (params.name == 'air'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    '> capture: ' + flowInfo.a_c.toFixed(1) + ' Mt (' + (flowInfo.a_c/(flowInfo.a+1e-10)*100).toFixed(2) + '%)'
                                 } else if (params.name == 'capture'){
                                     nodeInfo = nodeInfo + '<br/>' +
-                                    'fossil >: ' + Math.round(f_c*10)/10.0 + ' Mt (' + Math.round(f_c/capture*100*100)/100.0 + '%)<br/>' +
-                                    'biogenic >: ' + Math.round(b_c*10)/10.0 + ' Mt (' + Math.round(b_c/capture*100*100)/100.0 + '%)<br/>' +
-                                    '> utilization: ' + Math.round(c_u*10)/10.0 + ' Mt (' + Math.round(c_u/capture*100*100)/100.0 + '%)<br/>' +
-                                    '> storage: ' + Math.round(c_s*10)/10.0 + ' Mt (' + Math.round(c_s/capture*100*100)/100.0 + '%)';
+                                    'fossil >: ' + flowInfo.f_c.toFixed(1) + ' Mt (' + (flowInfo.f_c/(flowInfo.c+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    'biogenic >: ' + flowInfo.b_c.toFixed(1) + ' Mt (' + (flowInfo.b_c/(flowInfo.c+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    // 'air >: ' + flowInfo.a_c.toFixed(1) + ' Mt (' + (flowInfo.a_c/(flowInfo.c+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '> storage: ' + flowInfo.c_s.toFixed(1) + ' Mt (' + (flowInfo.c_s/(flowInfo.c+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '> utilization: ' + flowInfo.c_u.toFixed(1) + ' Mt (' + (flowInfo.c_u/(flowInfo.c+1e-10)*100).toFixed(2) + '%)'
                                 } else if (params.name == 'utilization'){
                                     nodeInfo = nodeInfo + '<br/>' +
-                                    'capture >: ' + Math.round(c_u*10)/10.0 + ' Mt (' + Math.round(c_u/utilization*100*100)/100.0 + '%)<br/>' +
-                                    '> methanol: ' + Math.round(u_m*10)/10.0 + ' Mt (' + Math.round(u_m/utilization*100*100)/100.0 + '%)<br/>' +
-                                    '> emission: ' + Math.round(u_e*10)/10.0 + ' Mt (' + Math.round(u_e/utilization*100*100)/100.0 + '%)';
+                                    'capture >: ' + flowInfo.c_u.toFixed(1) + ' Mt (' + (flowInfo.c_u/(flowInfo.u+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '> emission: ' + flowInfo.u_e.toFixed(1) + ' Mt (' + (flowInfo.u_e/(flowInfo.u+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '> methanol: ' + flowInfo.u_m.toFixed(1) + ' Mt (' + (flowInfo.u_m/(flowInfo.u+1e-10)*100).toFixed(2) + '%)'
                                 } else if (params.name == 'emission'){
                                     nodeInfo = nodeInfo + '<br/>' +
-                                    'utilization >: ' + Math.round(u_e*10)/10.0 + ' Mt (' + Math.round(u_e/emission*100*100)/100.0 + '%)<br/>' +
-                                    'fossil >: ' + Math.round(f_e*10)/10.0 + ' Mt (' + Math.round(f_e/emission*100*100)/100.0 + '%)<br/>' +
-                                    'biogenic >: ' + Math.round(b_e*10)/10.0 + ' Mt (' + Math.round(b_e/emission*100*100)/100.0 + '%)';
+                                    'fossil >: ' + flowInfo.f_e.toFixed(1) + ' Mt (' + (flowInfo.f_e/(flowInfo.e+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    'biogenic >: ' + flowInfo.b_e.toFixed(1) + ' Mt (' + (flowInfo.b_e/(flowInfo.e+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    'utilization >: ' + flowInfo.u_e.toFixed(1) + ' Mt (' + (flowInfo.u_e/(flowInfo.e+1e-10)*100).toFixed(2) + '%)'
                                 } else if (params.name == 'storage'){
                                     nodeInfo = nodeInfo + '<br/>' +
-                                    'capture >: ' + Math.round(c_s*10)/10.0 + ' Mt (' + Math.round(c_s/storage*100*100)/100.0 + '%)';
+                                    'capture >: ' + flowInfo.c_s.toFixed(1) + ' Mt (' + (flowInfo.c_s/(flowInfo.s+1e-10)*100).toFixed(2) + '%)'
                                 } else if (params.name == 'methanol'){
                                     nodeInfo = nodeInfo + '<br/>' +
-                                    'utilization >: ' + Math.round(u_m*10)/10.0 + ' Mt (' + Math.round(u_m/methanol*100*100)/100.0 + '%)';
+                                    'utilization >: ' + flowInfo.u_m.toFixed(1) + ' Mt (' + (flowInfo.u_m/(flowInfo.m+1e-10)*100).toFixed(2) + '%)'
                                 }
-                                return nodeInfo;
+                                return nodeInfo
                             }
                             else{
-                                return params.data.source + ' to ' + params.data.target + ': ' + Math.round(params.value*10)/10.0 + ' Mt';
+                                return params.data.source + ' to ' + params.data.target + ': ' + params.value.toFixed(1) + ' Mt'
                             }
                         }
                     },
-                    data: flowData[idx].data,
-                    links: flowData[idx].links
+                    data: isNational ? computeNationalFlow(flowData).data : flowData[idx].data,
+                    links: isNational ? computeNationalFlow(flowData).links : flowData[idx].links
                 }
             ]
-        };
-        sankeyChart.setOption(option, true);
+        }
+        sankeyChart.setOption(option, true)
     }
     
+    // create cover layer
     function creatWrap(){
-        var cover = document.createElement('div');
+        var cover = document.createElement('div')
         $(cover).addClass('cover').css({
             width: '100%',
             height: '100%',
@@ -541,16 +622,169 @@
             top: 0,
             left: 0,
             backgroundColor: 'rgba(0,0,0,.2)'
-        }).appendTo('.wrap');
+        }).appendTo('.wrap')
     }
     
+    // get mouse position
+    function getMousePos(e) {
+        var e = event || window.event
+        var scrollX = document.documentElement.scrollLeft || document.body.scrollLeft
+        var scrollY = document.documentElement.scrollTop || document.body.scrollTop
+        var x = e.pageX || e.clientX + scrollX
+        var y = e.pageY || e.clientY + scrollY
+        // console.log(x,y)
+        return {'x': x,'y': y}
+    }
+    
+    // remove cover layer
     function clearWrap(id){
         $(id).click(function(e){
-            this.remove();
-            $('#detail').remove();
-            return false;
-        });
+            // console.log(this)
+            this.remove()
+            $('#detail').remove()
+            return false
+        })
     }
+
+    function convertReferenceFrame(oldLength, newLength, relativePosition){
+        oldR = Number(relativePosition.slice(0, relativePosition.indexOf('%')))/100
+        newR = ((newLength - oldLength)/2 + oldLength*oldR)/newLength
+        return (newR*100).toString() + '%'
+    }
+
+    function computeTotal(supplyData){
+        return supplyData.reduce((tot, cur) => tot + cur.value.reduce((tot, cur) => tot + cur, 0), 0)
+    }
+
+    function computeProvTotal(supplyData){
+        return supplyData.map(cur => ({name: cur.name, value: cur.value.reduce((tot, cur) => tot + cur, 0)}))
+    }
+
+    function computeTechTotal(supplyData){
+        var tot = Array(tech.length).fill(0)
+        for (var i = 0; i < supplyData.length; i++){
+            for (var j = 0; j < tech.length; j++){
+                tot[j] += supplyData[i].value[j]
+            }
+        }
+        return tot
+    }
+
+    function constructTechTotal(tot){
+        data = []
+        for (var i = 0; i < tech.length; i++){
+            data.push({name: tech[i], value: tot[i]})
+        }
+        return data
+    }
+
+    function convertPointCoords(oldWindowHeight, oldWindowWidth, oldContainerHeight, oldContainerWidth,
+                                newWindowHeight, newWindowWidth, newContainerHeight, newContainerWidth, points){
+        return points.map(function(cur){
+            return [(cur[0] - (oldWindowWidth - oldContainerWidth)/2)/oldContainerWidth*newContainerWidth + (newWindowWidth - newContainerWidth)/2,
+                    (cur[1] - (oldWindowHeight - oldContainerHeight)/2)/oldContainerHeight*newContainerHeight + (newWindowHeight - newContainerHeight)/2]
+        })
+    }
+
+    function computeRelativeScale(flowData){
+        var provTot = flowData.map(cur => cur.data.reduce((tot, cur) => cur.depth == 0 ? tot + cur.value : tot, 0))
+        var provMax = provTot.reduce((tot, cur) => cur > tot ? cur : tot, 0)
+        return provTot.map(cur => cur/provMax)
+    }
+
+    function readFlowData(dataItem){
+        var fossil, biogenic, air, capture, utilization, emission, storage, methanol
+        var f_e, f_c, b_e, b_c, a_c, c_s, c_u, u_e, u_m
+        // console.log(dataItem)
+        for (var i = 0; i < dataItem.data.length; i++){
+            switch (dataItem.data[i].name){
+                case 'fossil':
+                    fossil = dataItem.data[i].value
+                    break
+                case 'biogenic':
+                    biogenic = dataItem.data[i].value
+                    break
+                case 'air':
+                    air = dataItem.data[i].value
+                    break
+                case 'capture':
+                    capture = dataItem.data[i].value
+                    break
+                case 'utilization':
+                    utilization = dataItem.data[i].value
+                    break
+                case 'emission':
+                    emission = dataItem.data[i].value
+                    break
+                case 'storage':
+                    storage = dataItem.data[i].value
+                    break
+                case 'methanol':
+                    methanol = dataItem.data[i].value
+                    break
+            }
+        }
+        for (var i = 0; i < dataItem.links.length; i++){
+            if (dataItem.links[i].source == 'fossil' && dataItem.links[i].target == 'emission'){
+                f_e = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'fossil' && dataItem.links[i].target == 'capture'){
+                f_c = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'biogenic' && dataItem.links[i].target == 'emission'){
+                b_e = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'biogenic' && dataItem.links[i].target == 'capture'){
+                b_c = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'air' && dataItem.links[i].target == 'capture'){
+                a_c = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'capture' && dataItem.links[i].target == 'storage'){
+                c_s = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'capture' && dataItem.links[i].target == 'utilization'){
+                c_u = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'utilization' && dataItem.links[i].target == 'emission'){
+                u_e = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'utilization' && dataItem.links[i].target == 'methanol'){
+                u_m = dataItem.links[i].value
+            }
+        }
+        fossil = fossil || 0, biogenic = biogenic || 0, air = air || 0, 
+        capture = capture || 0, 
+        utilization = utilization || 0, 
+        emission = emission || 0, storage = storage || 0, methanol = methanol || 0
+        f_e = f_e || 0, f_c = f_c || 0, 
+        b_e = b_e || 0, b_c = b_c || 0, 
+        a_c = a_c || 0, 
+        c_s = c_s || 0, c_u = c_u || 0, 
+        u_e = u_e || 0, u_m = u_m || 0
+        return {f: fossil, b: biogenic, a: air, c: capture, u: utilization, e: emission, s: storage, m: methanol,
+                f_e: f_e, f_c: f_c, b_e: b_e, b_c: b_c, a_c: a_c, c_s: c_s, c_u: c_u, u_e: u_e, u_m: u_m}
+    }
+
+    function computeNationalFlow(flowData){
+        return {
+            "data":[{"name":"fossil","depth":0,"itemStyle":{"color":"red"},"value": flowData.reduce((tot, cur) => tot + readFlowData(cur).f, 0)},
+                    {"name":"biogenic","depth":0,"itemStyle":{"color":"green"},"value": flowData.reduce((tot, cur) => tot + readFlowData(cur).b, 0)},
+                    {"name":"capture","depth":1,"itemStyle":{"color":"purple"},"value": flowData.reduce((tot, cur) => tot + readFlowData(cur).c, 0)},
+                    {"name":"utilization","depth":2,"itemStyle":{"color":"blue"},"value": flowData.reduce((tot, cur) => tot + readFlowData(cur).u, 0)},
+                    {"name":"emission","depth":3,"itemStyle":{"color":"yellow"},"value": flowData.reduce((tot, cur) => tot + readFlowData(cur).e, 0)},
+                    {"name":"storage","depth":3,"itemStyle":{"color":"gray"},"value": flowData.reduce((tot, cur) => tot + readFlowData(cur).s, 0)},
+                    {"name":"methanol","depth":3,"itemStyle":{"color":"orange"},"value": flowData.reduce((tot, cur) => tot + readFlowData(cur).m, 0)}],
+            "links":[{"source":"fossil","target":"capture","value": flowData.reduce((tot, cur) => tot + readFlowData(cur).f_c, 0)},
+                     {"source":"fossil","target":"emission","value": flowData.reduce((tot, cur) => tot + readFlowData(cur).f_e, 0)},
+                     {"source":"biogenic","target":"capture","value": flowData.reduce((tot, cur) => tot + readFlowData(cur).b_c, 0)},
+                     {"source":"biogenic","target":"emission","value": flowData.reduce((tot, cur) => tot + readFlowData(cur).b_e, 0)},
+                     {"source":"capture","target":"storage","value": flowData.reduce((tot, cur) => tot + readFlowData(cur).c_s, 0)},
+                     {"source":"capture","target":"utilization","value": flowData.reduce((tot, cur) => tot + readFlowData(cur).c_u, 0)},
+                     {"source":"utilization","target":"methanol","value": flowData.reduce((tot, cur) => tot + readFlowData(cur).u_m, 0)},
+                     {"source":"utilization","target":"emission","value": flowData.reduce((tot, cur) => tot + readFlowData(cur).u_e, 0)}]
+        }
+    }
+
+
     </script>
 </body>
 </html>
+
+<style type="text/css">
+    body {
+        margin: 0;
+    }
+</style>
