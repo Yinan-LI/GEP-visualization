@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pareto Front</title>
+
+    <script src="lib/jquery.js"></script>
+    <script src="lib/echarts.min.js"></script>
+    
+    <script type="text/javascript" src="json/PF_result.js"></script>
+</head>
+<body>
+    <div class="wrap" style="position: relative;"></div>
+    
+    <script>    
+    var windowHeight = window.innerHeight
+    var windowWidth = window.innerWidth
+
+    const refHeight = 722
+    const refWidth = 1536
+    var v_scale = windowHeight/refHeight > 1 ? windowHeight/refHeight : windowHeight/refHeight < 0.5 ? 1.5*windowHeight/refHeight : 1
+    var h_scale = windowWidth/refWidth > 1 ? windowWidth/refWidth : windowWidth/refWidth < 0.5 ? 1.5*windowWidth/refWidth : 1
+    const SCALING = Math.min(v_scale, h_scale)
+
+    var lineContainer = document.createElement('div')
+    lineContainer.id = 'line'
+    $(lineContainer).css({
+        'width': windowWidth,
+        'height': windowHeight,
+        'margin': 'auto'
+    }).appendTo('.wrap')
+
+    var myChart = echarts.init(document.getElementById('line'))
+    
+    var line0 = resultJson.line0
+    var line1 = resultJson.line1
+    var line2 = resultJson.line2
+    var line3 = resultJson.line3
+    var result0 = resultJson.result0
+    var result1 = resultJson.result1
+    var result2 = resultJson.result2
+    var result3 = resultJson.result3
+
+    var E_tech =      ['Coal',    'Coal-CCS', 'Natural gas', 'Natural gas-CCS', 'Nuclear', 'Hydro',   'Wind',    'Solar',   'Biomass', 'BECCS']
+    var E_colorList = ['#546570', '#8e8e8e',  '#c23531',     '#d48265',         '#913d88', '#61a0a8', '#c4ccd3', '#f7ca18', '#749f83', '#91c7ae']
+
+    var M_tech =      ['Coal',    'Coke-oven gas', 'Natural gas', 'Carbon dioxide']
+    var M_colorList = ['#654321', '#b5651d',       'orange',      'green']
+
+    var option = {
+        legend:{
+            show: true,
+            data: [{name: '2050 BAU', icon: ''},
+                   {name: '2050 Nexus', icon: ''},
+                   {name: '2050 Nexus-v', icon: ''},
+                   {name: '2050 Nexus-s', icon: ''}],
+            right: convertReferenceFrame(refWidth, windowWidth, '12.5%', SCALING),
+            top: convertReferenceFrame(refHeight, windowHeight, '5%', SCALING),
+            padding: 0,
+            itemGap: SCALING*10,
+            itemWidth: SCALING*25,
+            itemHeight: SCALING*14,
+            textStyle:{
+                color: 'black',
+                fontSize: SCALING*14
+            },
+            orient: 'vertical'
+        },
+        tooltip: {
+            trigger: 'axis',
+            padding: SCALING*5,
+            textStyle:{
+                fontSize: SCALING*14
+            },
+            axisPointer: {
+                type: 'cross',
+                axis: 'x',
+                lineStyle:{
+                    type: 'solid',
+                    color: 'gray',
+                    width: SCALING*1
+                },
+                crossStyle:{
+                    type: 'solid',
+                    color: 'gray',
+                    width: SCALING*1
+                },
+                label:{
+                    fontSize: SCALING*12,
+                    margin: SCALING*3,
+                    padding: SCALING*5,
+                    shadowBlur: 0,
+                    formatter: function(params){
+                        return params.value.toFixed(2)
+                    }
+                }
+            },
+            formatter: function(params){
+                // console.log(params)
+                var text = ''
+                params.forEach(function(item, idx){
+                    // console.log(item.marker)
+                    text = text + constructMarker(item.color, SCALING) + item.seriesName + ':<br/>' +
+                                  '- cost = ' + item.data[1].toFixed(1) + ' billion RMB<br/>' +
+                                  '- transgression = ' + item.data[0].toFixed(1) + '<br/>'
+                })
+                return text
+            }
+        },
+        grid:{
+            left: convertReferenceFrame(refWidth, windowWidth, '7%', SCALING),
+            right: convertReferenceFrame(refWidth, windowWidth, '22.5%', SCALING),
+            top: convertReferenceFrame(refHeight, windowHeight, '5%', SCALING),
+            bottom: convertReferenceFrame(refHeight, windowHeight, '10%', SCALING)
+        },
+        xAxis: [{
+            name: 'Transgression',
+            nameLocation: 'middle',
+            nameTextStyle:{
+                fontSize: SCALING*16
+            },
+            nameGap: SCALING*30,
+            type: 'value',
+            min: 0,
+            max: 1500,
+            interval: 100,
+            axisLabel:{
+                fontSize: SCALING*12,
+                margin: SCALING*8,
+                formatter: function(value, idx){
+                    return value
+                }
+            },
+            axisLine:{
+                lineStyle:{
+                    width: SCALING*1
+                }
+            },
+            axisTick:{
+                length: SCALING*5,
+                lineStyle:{
+                    width: SCALING*1
+                }
+            },
+            splitLine:{
+                lineStyle:{
+                    type: 'dashed',
+                    color: 'gray',
+                    width: SCALING*1
+                }
+            }
+        }],
+        yAxis: [{
+            name: 'Cost (billion 2018-RMB)',
+            nameLocation: 'middle',
+            nameTextStyle:{
+                fontSize: SCALING*16
+            },
+            nameGap: SCALING*60,
+            type: 'value',
+            min: 0,
+            max: 15000,
+            interval: 1000,
+            axisLabel:{
+                fontSize: SCALING*12,
+                margin: SCALING*8,
+                formatter: function(value, idx){
+                    return value
+                }
+            },
+            axisLine:{
+                lineStyle:{
+                    width: SCALING*1
+                }
+            },
+            axisTick:{
+                length: SCALING*5,
+                lineStyle:{
+                    width: SCALING*1
+                }
+            },
+            splitLine:{
+                lineStyle:{
+                    type: 'dashed',
+                    color: 'gray',
+                    width: SCALING*1
+                }
+            }
+        }],
+        dataZoom: [{
+            type: 'inside',
+            xAxisIndex: 0,
+            startValue: 0,
+            endValue: 1000
+        },{
+            type: 'inside',
+            yAxisIndex: 0,
+            startValue: 5000,
+            endValue: 10000
+        }],
+        series: [{
+            name: '2050 BAU',
+            type: 'line',
+            showSymbol: false,
+            symbolSize: SCALING*5,
+            lineStyle:{
+                width: SCALING*4
+            },
+            data: line0
+        },{
+            name: '2050 Nexus',
+            type: 'line',
+            showSymbol: false,
+            symbolSize: SCALING*5,
+            lineStyle:{
+                width: SCALING*4
+            },
+            data: line1
+        },{
+            name: '2050 Nexus-v',
+            type: 'line',
+            showSymbol: false,
+            symbolSize: SCALING*5,
+            lineStyle:{
+                width: SCALING*4
+            },
+            data: line2
+        },{
+            name: '2050 Nexus-s',
+            type: 'line',
+            showSymbol: false,
+            symbolSize: SCALING*5,
+            lineStyle:{
+                width: SCALING*4
+            },
+            data: line3
+        }]
+    }
+
+    myChart.setOption(option)
+
+    // click line to show pie plot
+    myChart.on('click', function(e){
+        // console.log(e)
+        if(e.componentSubType == "line"){
+            // create cover layer
+            creatWrap()
+            // create container for pie plot
+            var divObj = document.createElement('div')
+            divObj.id = 'detail'
+            var divX = getMousePos()['x']
+            var divY = getMousePos()['y']
+            $(divObj).css({
+                'width': SCALING*450,
+                'height': SCALING*250,
+                'border': SCALING*1 + 'px solid #ccc',
+                'position': 'absolute',
+                'top': divY,
+                'left': divX
+            }).appendTo('.wrap')
+            // make pie plot
+            plotPieChart(e)
+            // remove cover layer (and detailed plot)
+            clearWrap('.cover')
+        }
+        return
+    })
+    
+    // make pie plot
+    function plotPieChart(e) {
+        // console.log(e)
+        var pieChart = echarts.init(document.getElementById('detail'))
+        var result
+        switch (e.seriesIndex){
+            case 0:
+                result = result0
+                break
+            case 1:
+                result = result1
+                break
+            case 2:
+                result = result2
+                break
+            case 3:
+                result = result3
+                break
+        }
+        var option = {
+            backgroundColor: 'rgba(255,255,255,.6)',
+            tooltip: {
+                trigger: 'item',
+                padding: SCALING*5,
+                textStyle:{
+                    fontSize: SCALING*14
+                }
+            },
+            graphic:{
+                elements:[
+                    {
+                        type: 'text',
+                        left: SCALING*20,
+                        top: SCALING*9,
+                        style:{
+                            text: 'total cost = ' + e.data[1].toFixed(1) + ' billion RMB' + 
+                                  '\ntotal transgression = ' + e.data[0].toFixed(1),
+                            font: 'normal ' + SCALING*14.5 + 'px sans-serif'
+                        }
+                    },{
+                        type: 'text',
+                        left: SCALING*20,
+                        top: SCALING*52.5,
+                        style:{
+                            text: 'Electricity:',
+                            font: 'bold ' + SCALING*14 + 'px sans-serif'
+                        }
+                    },{
+                        type: 'text',
+                        left: SCALING*20,
+                        top: SCALING*54,
+                        style:{
+                            text: '\n- generation: ' + result[e.dataIndex][0]['tech'].reduce((a,b) => a + b, 0).toFixed(1) + ' TWh' + 
+                                  '\n- cost: ' + result[e.dataIndex][0]['cost'].toFixed(1) + ' billion RMB' + 
+                                  '\n- impact score: ' + result[e.dataIndex][0]['impact'].toFixed(1),
+                            font: 'normal ' + SCALING*14.5 + 'px sans-serif'
+                        }
+                    },{
+                        type: 'text',
+                        left: SCALING*245,
+                        top: SCALING*52.5,
+                        style:{
+                            text: 'Methanol:',
+                            font: 'bold ' + SCALING*14 + 'px sans-serif'
+                        }
+                    },{
+                        type: 'text',
+                        left: SCALING*245,
+                        top: SCALING*54,
+                        style:{
+                            text: '\n- production: ' + result[e.dataIndex][1]['tech'].reduce((a,b) => a + b, 0).toFixed(1) + ' Mt' + 
+                                  '\n- cost: ' + result[e.dataIndex][1]['cost'].toFixed(1) + ' billion RMB' + 
+                                  '\n- impact score: ' + result[e.dataIndex][1]['impact'].toFixed(1),
+                            font: 'normal ' + SCALING*14.5 + 'px sans-serif'
+                        }
+                    },{
+                        type: 'line',
+                        shape:{
+                            x1: SCALING*0,
+                            y1: SCALING*45,
+                            x2: SCALING*450,
+                            y2: SCALING*45
+                        },
+                        style:{
+                            stroke: 'gray',
+                            lineWidth: SCALING*1.75
+                        }
+                    },{
+                        type: 'line',
+                        shape:{
+                            x1: SCALING*225,
+                            y1: SCALING*45,
+                            x2: SCALING*225,
+                            y2: SCALING*250
+                        },
+                        style:{
+                            stroke: 'gray',
+                            lineWidth: SCALING*1.75
+                        }
+                    }
+                ]
+            },
+            series: [
+                {
+                    type: 'pie',
+                    // radius: Math.sqrt(result[e.dataIndex][0]['tech'].reduce((a,b) => a + b, 0))/scale[1],
+                    radius: SCALING*60,
+                    center: [SCALING*112.5, SCALING*181],
+                    label:{
+                        show: false
+                    },
+                    labelLine:{
+                        show: false
+                    },
+                    itemStyle:{
+                        color: function(params){
+                            return E_colorList[params.dataIndex]
+                        }
+                    },
+                    tooltip:{
+                        formatter: function(params){
+                            // console.log(params)
+                            return E_tech[params.dataIndex] + ': ' + params.data.toFixed(1) + ' TWh (' + params.percent.toFixed(2) + '%)'
+                        }
+                    },
+                    animation: false,
+                    data: result[e.dataIndex][0]['tech']
+                }, {
+                    type: 'pie',
+                    radius: SCALING*60,
+                    center: [SCALING*337.5, SCALING*181],
+                    label:{
+                        show: false
+                    },
+                    labelLine:{
+                        show: false
+                    },
+                    itemStyle:{
+                        color: function(params){
+                            return M_colorList[params.dataIndex]
+                        }
+                    },
+                    tooltip:{
+                        formatter: function(params){
+                            // console.log(params)
+                            return M_tech[params.dataIndex] + ': ' + params.data.toFixed(1) + ' Mt (' + params.percent.toFixed(2) + '%)'
+                        }
+                    },
+                    animation: false,
+                    data: result[e.dataIndex][1]['tech']
+                }
+            ]
+        }
+        pieChart.setOption(option)
+    }
+
+    // create cover layer
+    function creatWrap(){
+        var cover = document.createElement('div')
+        $(cover).addClass('cover').css({
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            right: convertReferenceFrame(refWidth, windowWidth, '21%', SCALING),
+            backgroundColor: 'rgba(0,0,0,.2)'
+        }).appendTo('.wrap')
+        showPieLegend()
+    }
+
+    // show legend of pie chart
+    function showPieLegend(color, tech){
+        // electricity legend
+        var divObj = document.createElement('div')
+        divObj.id = 'E_legend'
+        $(divObj).css({
+            'width': convertReferenceFrame(refWidth, windowWidth, '10%', SCALING),
+            'height': SCALING*265,
+            'border-top': SCALING*1.75 + 'px solid gray',
+            'border-right': SCALING*1.75 + 'px solid gray',
+            'position': 'absolute',
+            'top': convertReferenceFrame(refHeight, windowHeight, '20%', SCALING),
+            'right': convertReferenceFrame(refWidth, windowWidth, '10.5%', SCALING),
+        }).appendTo('.wrap')
+
+        var E_legend = echarts.init(document.getElementById('E_legend'))
+        var option = {
+            graphic:{
+                elements:[
+                    {
+                        type: 'text',
+                        left: SCALING*2.5,
+                        top: SCALING*5,
+                        style:{
+                            text: 'Electricity:',
+                            font: 'bold ' + SCALING*14 + 'px sans-serif'
+                        }
+                    }
+                ]
+            },
+            legend:{
+                show: true,
+                data: [{name: 'Coal', icon: 'roundRect'},
+                       {name: 'Coal-CCS', icon: 'roundRect'},
+                       {name: 'Natural gas', icon: 'roundRect'},
+                       {name: 'Natural gas-CCS', icon: 'roundRect'},
+                       {name: 'Nuclear', icon: 'roundRect'},
+                       {name: 'Hydro', icon: 'roundRect'},
+                       {name: 'Wind', icon: 'roundRect'},
+                       {name: 'Solar', icon: 'roundRect'},
+                       {name: 'Biomass', icon: 'roundRect'},
+                       {name: 'BECCS', icon: 'roundRect'}],
+                left: SCALING*2.5,
+                top: SCALING*25,
+                padding: 0,
+                itemGap: SCALING*10,
+                itemWidth: SCALING*25,
+                itemHeight: SCALING*14,
+                textStyle:{
+                    color: 'black',
+                    fontSize: SCALING*14
+                },
+                orient: 'vertical'
+            },
+            series: [
+                {
+                    type: 'pie',
+                    radius: 0,
+                    center: [0,0],
+                    label:{
+                        show: false
+                    },
+                    labelLine:{
+                        show: false
+                    },
+                    itemStyle:{
+                        color: function(params){
+                            return E_colorList[params.dataIndex]
+                        }
+                    },
+                    animation: false,
+                    data: constructLegendData(E_tech)
+                }
+            ]
+        }
+        E_legend.setOption(option)
+
+        // methanol legend
+        var divObj = document.createElement('div')
+        divObj.id = 'M_legend'
+        $(divObj).css({
+            'width': convertReferenceFrame(refWidth, windowWidth, '10%', SCALING),
+            'height': SCALING*265,
+            'border-top': SCALING*1.75 + 'px solid gray',
+            'position': 'absolute',
+            'top': convertReferenceFrame(refHeight, windowHeight, '20%', SCALING),
+            'right': convertReferenceFrame(refWidth, windowWidth, '0.5%', SCALING),
+        }).appendTo('.wrap')
+
+        var M_legend = echarts.init(document.getElementById('M_legend'))
+        var option = {
+            graphic:{
+                elements:[
+                    {
+                        type: 'text',
+                        left: SCALING*5,
+                        top: SCALING*5,
+                        style:{
+                            text: 'Methanol:',
+                            font: 'bold ' + SCALING*14 + 'px sans-serif'
+                        }
+                    }
+                ]
+            },
+            legend:{
+                show: true,
+                data: [{name: 'Coal', icon: 'roundRect'},
+                       {name: 'Coke-oven gas', icon: 'roundRect'},
+                       {name: 'Natural gas', icon: 'roundRect'},
+                       {name: 'Carbon dioxide', icon: 'roundRect'}],
+                left: SCALING*5,
+                top: SCALING*25,
+                padding: 0,
+                itemGap: SCALING*10,
+                itemWidth: SCALING*25,
+                itemHeight: SCALING*14,
+                textStyle:{
+                    color: 'black',
+                    fontSize: SCALING*14
+                },
+                orient: 'vertical'
+            },
+            series: [
+                {
+                    type: 'pie',
+                    radius: 0,
+                    center: [0,0],
+                    label:{
+                        show: false
+                    },
+                    labelLine:{
+                        show: false
+                    },
+                    itemStyle:{
+                        color: function(params){
+                            return M_colorList[params.dataIndex]
+                        }
+                    },
+                    animation: false,
+                    data: constructLegendData(M_tech)
+                }
+            ]
+        }
+        M_legend.setOption(option)
+    }
+
+    // get mouse position
+    function getMousePos(e) {
+        var e = event || window.event
+        var scrollX = document.documentElement.scrollLeft || document.body.scrollLeft
+        var scrollY = document.documentElement.scrollTop || document.body.scrollTop
+        var x = e.pageX || e.clientX + scrollX
+        var y = e.pageY || e.clientY + scrollY
+        // console.log(x,y)
+        return {'x': x,'y': y}
+    }
+
+    // remove cover layer
+    function clearWrap(id){
+        $(id).click(function(e){
+            // console.log(this)
+            this.remove()
+            $('#detail').remove()
+            removePieLegend()
+            return false
+        })
+    }
+
+    // remove legend of pie chart
+    function removePieLegend(){
+        $('#E_legend').remove()
+        $('#M_legend').remove()
+        // console.log(myChart.getOption().dataZoom[0].startValue)
+        option.dataZoom[0].startValue = myChart.getOption().dataZoom[0].startValue
+        option.dataZoom[0].endValue = myChart.getOption().dataZoom[0].endValue
+        option.dataZoom[1].startValue = myChart.getOption().dataZoom[1].startValue
+        option.dataZoom[1].endValue = myChart.getOption().dataZoom[1].endValue
+        myChart.setOption(option, true)
+    }
+
+    function convertReferenceFrame(oldLength, newLength, relativePosition, scaling){
+        oldR = Number(relativePosition.slice(0, relativePosition.indexOf('%')))/100
+        newR = oldLength*oldR*scaling/newLength
+        return (newR*100).toString() + '%'
+    }
+
+    function constructMarker(color, scaling){
+        return '<span style="display:inline-block;margin-right:' + scaling*5 + 'px;border-radius:' + scaling*10 + 'px;width:' + scaling*10 + 'px;height:' + scaling*10 + 'px;background-color:' + color + ';"></span>'
+    }
+
+    function constructLegendData(tech){
+        data = []
+        for (var i = 0; i < tech.length; i++){
+            data.push({name: tech[i], value: 0})
+        }
+        return data
+    }
+
+
+    </script>
+</body>
+</html>
+
+<style type="text/css">
+    body {
+        margin: 0;
+    }
+</style>
