@@ -1,5 +1,4 @@
-## Visualization
-To use the visualization,
+## To use the visualization:
 <ol>
    <li>Open a html file in a browser:
    <ul>
