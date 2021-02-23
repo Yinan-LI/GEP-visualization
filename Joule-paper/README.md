@@ -8,7 +8,9 @@
       <li>ammonia.html for chemical sector - ammonia</li>
    </ul></li>
    
+   
    <li>Enter a year from 2018 to 2060 as prompted</li>
+   
    
    <li>Refresh the page to re-enter a year if needed.</li>
 </ol>
