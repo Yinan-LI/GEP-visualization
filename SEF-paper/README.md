@@ -21,3 +21,5 @@ To use the visualization,
    
    <li>Refresh the page to re-enter scenario number if needed.</li>
 </ol>
+
+For more information, please refer to Y. Li, S. Lan, J. Pérez-Ramírez, and X. Wang, “Achieving a low-carbon future through the energy–chemical nexus in China,” Sustain. Energy Fuels, 2020, doi: 10.1039/d0se01337d.
