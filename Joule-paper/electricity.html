@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Electricity</title>
+
+    <script src="lib/jquery.js"></script>
+    <script src="lib/echarts.min.js"></script>
+    <script src="lib/china.js"></script>
+
+    <script type="text/javascript" src="lib/P_name.js"></script>
+    <script type="text/javascript" src="lib/P_coordinate_area.js"></script>
+    <script type="text/javascript" src="electricity_result.js"></script>
+    <script type="text/javascript" src="electricity_color.js"></script>
+</head>
+<body>
+    <div class="wrap" style="position: relative;"></div>
+    
+    <script>
+    year = prompt('Please enter a year from 2018 to 2060:')
+    while (year < 2018 || year > 2060){
+        year = prompt('Please enter a year from 2018 to 2060:')
+    }
+    // year = 2060
+    
+    const mapAspectRatio = 0.75
+    
+    var windowHeight = window.innerHeight
+    var windowWidth = window.innerWidth
+    var containerHeight
+    var containerWidth
+    if (windowHeight/windowWidth > mapAspectRatio) {
+        containerWidth = windowWidth
+        containerHeight = containerWidth*mapAspectRatio
+    } else {
+        containerHeight = windowHeight
+        containerWidth = containerHeight/mapAspectRatio
+    }
+
+    const SCALING = containerHeight/722
+
+    var mapContainer = document.createElement('div')
+    mapContainer.id = 'map'
+    $(mapContainer).css({
+        'width': Math.max(windowWidth, containerWidth),
+        'height': Math.max(windowHeight, containerHeight),
+        'margin': 'auto'
+    }).appendTo('.wrap')
+    
+    var myChart = echarts.init(document.getElementById('map'))
+    
+    var nameMap = nameJson
+    var geoCoordMap = coordinateJson
+
+    var supplyData = resultJson[year].supply
+    var capacityData = resultJson[year].capacity
+    var IflowData = resultJson[year].Iflow
+    var NIflowData = resultJson[year].NIflow
+    var CflowData = resultJson[year].Cflow
+    var NCflowData = resultJson[year].NCflow
+    
+    var tech =      ['Coal',    'Coal-CCS', 'Natural gas', 'Natural gas-CCS', 'Nuclear', 'Hydro',   'Wind',    'Solar',   'Biomass', 'Biomass-CCS']
+    var colorList = ['#546570', '#8e8e8e',  '#c23531',     '#d48265',         '#913d88', '#61a0a8', '#c4ccd3', '#f7ca18', '#749f83', '#91c7ae']
+
+    var option = {
+        tooltip: {
+            trigger: 'item',
+            padding: SCALING*5,
+            textStyle:{
+                fontSize: SCALING*14
+            }
+        },
+        geo: {
+            map: 'china',
+            roam: true,
+            zoom: 1,
+            aspectScale: mapAspectRatio,
+            zlevel: 1,
+            label: {
+                emphasis: {
+                    show: false,
+                }
+            },
+            itemStyle: {
+                normal: {
+                    areaColor: 'lightGray',
+                    borderColor: 'white',
+                    borderWidth: SCALING*0.75
+                },
+                emphasis: {
+                    areaColor: 'gray'
+                }
+            },
+            nameMap: nameMap
+        },
+        visualMap: {
+            min: 0,
+            max: 9500,
+            left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+            bottom: convertReferenceFrame(containerHeight, windowHeight, '2.5%'),
+            itemHeight: SCALING*500,
+            itemWidth: SCALING*25,
+            padding: 0,
+            show : true,
+            calculable: true,
+            seriesIndex: 0,
+            // color from large to small
+            color: colorMap.reverse(),
+            textStyle:{
+                color: 'black',
+                fontSize: SCALING*12
+            }
+        },
+        title:{
+            show: true,
+            text: 'Electricity sector: ' + year,
+            textStyle:{
+                color: 'black',
+                fontSize: SCALING*18
+            },
+            left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+            top: convertReferenceFrame(containerHeight, windowHeight, '4.5%'),
+            padding: 0
+        },
+        graphic:{
+            elements:[
+                {
+                    type: 'text',
+                    left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+                    bottom: convertReferenceFrame(containerHeight, windowHeight, '77%'),
+                    style:{
+                        text: 'Total generation (TWh)',
+                        font: 'normal ' + SCALING*14 + 'px sans-serif'
+                    }
+                },{
+                    type: 'text',
+                    left: convertReferenceFrame(containerWidth, windowWidth, '9.5%'),
+                    bottom: convertReferenceFrame(containerHeight, windowHeight, ((722*0.025 + 12 + 2000/9500*500 + 1)/722*100).toString() + '%'),
+                    style:{
+                        text: '2000',
+                        font: 'normal ' + SCALING*12 + 'px sans-serif'
+                    }
+                },{
+                    type: 'polygon',
+                    shape:{
+                        points: convertPointCoords(722, 1536, 722, 962.67, windowHeight, windowWidth, containerHeight, containerWidth, 
+                            [[360, 722 - (722*0.025 + 12 + 2000/9500*500)],
+                             [360 + 14, 722 - (722*0.025 + 12 + 2000/9500*500)],
+                             [360 + 14, 722 - (722*0.025 + 12 + 2000/9500*500) - 14]])
+                    },
+                    style:{
+                        fill: 'rgba(192.83675464320626, 21.43988269794721, 136.019550342131, 1.0)'
+                    }
+                },{
+                    type: 'text',
+                    left: convertReferenceFrame(containerWidth, windowWidth, '9.5%'),
+                    bottom: convertReferenceFrame(containerHeight, windowHeight, ((722*0.025 + 12 + 1000/9500*500 - 6)/722*100).toString() + '%'),
+                    style:{
+                        text: '1000',
+                        font: 'normal ' + SCALING*12 + 'px sans-serif'
+                    }
+                },{
+                    type: 'polygon',
+                    shape:{
+                        points: convertPointCoords(722, 1536, 722, 962.67, windowHeight, windowWidth, containerHeight, containerWidth, 
+                            [[360, 722 - (722*0.025 + 12 + 1000/9500*500)],
+                             [360 + 14, 722 - (722*0.025 + 12 + 1000/9500*500) + 7],
+                             [360 + 14, 722 - (722*0.025 + 12 + 1000/9500*500) - 7]])
+                    },
+                    style:{
+                        fill: 'rgba(250.24437927663735, 163.6432062561095, 182.34408602150538, 1.0)'
+                    }
+                },{
+                    type: 'text',
+                    left: convertReferenceFrame(containerWidth, windowWidth, '24.3%'),
+                    bottom: convertReferenceFrame(containerHeight, windowHeight, '11.1%'),
+                    style:{
+                        text: formatTotalText(supplyData),
+                        font: 'normal ' + SCALING*16 + 'px sans-serif'
+                    }
+                }
+            ]
+        },
+        legend: {
+            show: true,
+            data: [{name: 'Coal', icon: 'roundRect'},
+                   {name: 'Coal-CCS', icon: 'roundRect'},
+                   {name: 'Natural gas', icon: 'roundRect'},
+                   {name: 'Natural gas-CCS', icon: 'roundRect'},
+                   {name: 'Nuclear', icon: 'roundRect'},
+                   {name: 'Hydro', icon: 'roundRect'},
+                   {name: 'Wind', icon: 'roundRect'},
+                   {name: 'Solar', icon: 'roundRect'},
+                   {name: 'Biomass', icon: 'roundRect'},
+                   {name: 'Biomass-CCS', icon: 'roundRect'}],
+            left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+            top: convertReferenceFrame(containerHeight, windowHeight, '10%'),
+            padding: 0,
+            itemGap: SCALING*10,
+            itemWidth: SCALING*25,
+            itemHeight: SCALING*14,
+            width: SCALING*600,
+            textStyle:{
+                color: 'black',
+                fontSize: SCALING*14
+            },
+
+        },
+        series: []
+    }
+
+    myChart.setOption(option)
+
+    function renderEachCity() {
+        var option = {
+            series: [{
+                name: 'area',
+                type: 'map',
+                map: 'china',
+                geoIndex: 0,
+                tooltip:{
+                    formatter: function(params){
+                        // console.log(params)
+                        // return '[' + params.name + '] Total generation = ' + params.value.toFixed(1) + ' TWh'
+                        return
+                    }
+                },
+                data: computeProvTotal(supplyData)
+            },{
+                type: 'pie',
+                radius: [SCALING*50, SCALING*75],
+                center: [convertReferenceFrame(containerWidth, windowWidth, '27%'), 
+                         convertReferenceFrame(containerHeight, windowHeight, '86%')],
+                label:{
+                    show: false
+                },
+                labelLine:{
+                    show: false
+                },
+                itemStyle:{
+                    color: function(params){
+                        return colorList[params.dataIndex]
+                    }
+                },
+                tooltip:{
+                    formatter: function(params){
+                        // console.log(params)
+                        return tech[params.dataIndex] + ' = ' + params.value.toFixed(1) + ' TWh (' + params.percent.toFixed(2) + '%)'
+                    }
+                },
+                animation: false,
+                data: constructTechTotal(computeTechTotal(supplyData))
+            }]
+        }
+
+        // console.log(myChart.getOption().geo[0].zoom)
+        var zoomScale = myChart.getOption().geo[0].zoom
+
+        echarts.util.each(supplyData, function(dataItem, idx) {
+            
+            var geoCoord = geoCoordMap[dataItem.name]
+            var coord = myChart.convertToPixel('geo', geoCoord)
+
+            option.series.push({
+                type: 'pie',
+                radius: Math.round(dataItem.value.reduce((tot, cur) => tot + cur, 0)) > 0 ? //SCALING*16*zoomScale : 0,
+                        SCALING*Math.sqrt(dataItem.value.reduce((tot, cur) => tot + cur, 0)/10 + 100)*zoomScale : 0,
+                center: coord,
+                zlevel: 2,
+                label:{
+                    show: false
+                },
+                labelLine:{
+                    show: false
+                },
+                itemStyle:{
+                    color: function(params){
+                        return colorList[params.dataIndex]
+                    }
+                },
+                tooltip:{
+                    formatter: function(params){
+                        // console.log(params)
+                        return '[' + supplyData[params.seriesIndex - 2].name + '] ' + tech[params.dataIndex] + ' = ' + 
+                                params.data.toFixed(1) + ' TWh (' + params.percent.toFixed(2) + '%)'
+                    }
+                },
+                animation: false,
+                data: dataItem.value
+            })
+        })
+        console.time('a')
+        myChart.setOption(option, {notMerge: false})
+        console.timeEnd('a')
+    }
+
+    setTimeout(renderEachCity, 0)
+    
+
+    // zoom and drag of map
+    function throttle(fn, delay, debounce) {
+
+        var currCall
+        var lastCall = 0
+        var lastExec = 0
+        var timer = null
+        var diff
+        var scope
+        var args
+
+        delay = delay || 0
+
+        function exec() {
+            lastExec = (new Date()).getTime()
+            timer = null
+            fn.apply(scope, args || [])
+        }
+
+        var cb = function() {
+            currCall = (new Date()).getTime()
+            scope = this
+            args = arguments
+            diff = currCall - (debounce ? lastCall : lastExec) - delay
+
+            clearTimeout(timer)
+
+            if (debounce) {
+                timer = setTimeout(exec, delay)
+            } else {
+                if (diff >= 0) {
+                    exec()
+                } else {
+                    timer = setTimeout(exec, -diff)
+                }
+            }
+
+            lastCall = currCall
+        }
+
+        return cb
+    }
+
+    var throttledRenderEachCity = throttle(renderEachCity, 0)
+    myChart.on('geoRoam', throttledRenderEachCity)
+
+
+    // click pie/map to show bar plot, click bar to show sankey plot
+    myChart.on('click',function(e){
+        // console.log(e)
+        if(e.componentSubType == "pie" || e.componentSubType == "map"){
+            var idx = e.componentSubType == "pie" ? e.seriesIndex - 2 : e.dataIndex
+            // console.log(idx)
+            var isNational = false
+            if (idx == -1){
+                if (e.componentSubType == "pie"){
+                    isNational = true
+                }
+                else{
+                    return
+                }
+            }
+            // create cover layer
+            creatWrap()
+            // create container for bar/sankey plot
+            var divObj = document.createElement('div')
+            divObj.id = 'detail'
+            var divX = getMousePos()['x']
+            var divY = getMousePos()['y']
+            $(divObj).css({
+                'width': SCALING*400,
+                'height': SCALING*300,
+                'border': SCALING*1 + 'px solid #ccc',
+                'position': 'absolute',
+                'top': isNational ? divY - SCALING*300 : divY,
+                'left': divX
+            }).appendTo('.wrap')
+            // make bar/sankey plot
+            plotBarChart(idx, isNational).on('click', function(e){
+                // console.log(e, idx)
+                if (e.componentSubType == "bar"){
+                    if ([5,6,7].includes(e.dataIndex)){
+                        // console.log('I')
+                        plotISankeyChart(idx, isNational)
+                    }
+                    else if ([1,3,9].includes(e.dataIndex)){
+                        // console.log('C')
+                        plotCSankeyChart(idx, isNational)
+                    }
+                }
+            })
+            // remove cover layer (and detailed plot)
+            clearWrap('.cover')
+        }
+        return
+    })
+
+    // make bar plot
+    function plotBarChart(idx, isNational) {
+        var barChart = echarts.init(document.getElementById('detail'))
+        var option = {
+            backgroundColor: 'rgba(255,255,255,.6)',
+            tooltip: {
+                trigger: 'item',
+                triggerOn: 'mousemove',
+                padding: SCALING*5,
+                textStyle:{
+                    fontSize: SCALING*14
+                }
+            },
+            grid:{
+                left: '15%',
+                right: '5%',
+                top: '20%',
+                bottom: '10%'
+            },
+            xAxis: [
+                {
+                    type: 'category',
+                    data: ['E1','E2','E3','E4','E5','E6','E7','E8','E9','E10'],
+                    axisLabel:{
+                        fontSize: SCALING*12,
+                        margin: SCALING*8
+                    },
+                    axisLine:{
+                        lineStyle:{
+                            width: SCALING*1
+                        }
+                    },
+                    axisTick:{
+                        length: SCALING*5,
+                        lineStyle:{
+                            width: SCALING*1
+                        }
+                    }
+                }
+            ],
+            yAxis: [
+                {
+                    splitLine: {
+                        show: false
+                    },
+                    type: 'value',
+                    min: 0,
+                    max: 8000,
+                    interval: 1000,
+                    name: 'Electricity (TWh)',
+                    nameLocation: 'end',
+                    nameGap: SCALING*18,
+                    nameTextStyle:{
+                        fontStyle: 'bold',
+                        fontSize: SCALING*12
+                    },
+                    axisLabel:{
+                        fontSize: SCALING*12,
+                        margin: SCALING*8
+                    },
+                    axisLine:{
+                        lineStyle:{
+                            width: SCALING*1
+                        }
+                    },
+                    axisTick:{
+                        length: SCALING*5,
+                        lineStyle:{
+                            width: SCALING*1
+                        }
+                    }
+                }
+            ],
+            series: [
+                {
+                    type: 'bar',
+                    stack: 'a',
+                    barWidth: SCALING*20,
+                    itemStyle: {
+                        color: function(params){
+                            return colorList[params.dataIndex]
+                        }
+                    },
+                    label: {
+                        show: true,
+                        position: 'top',
+                        fontSize: SCALING*8,
+                        textStyle: {
+                            color: 'black'
+                        },
+                        formatter: function(params){
+                            // console.log(params, idx)
+                            var c = idx == -1 ? computeTechTotal(capacityData)[params.dataIndex] : capacityData[idx].value[params.dataIndex]
+                            var s = idx == -1 ? computeTechTotal(supplyData)[params.dataIndex] : supplyData[idx].value[params.dataIndex]
+                            var text = ''
+                            if (Math.round(c) - Math.round(s) > 0){
+                                text += '(' + Math.round(c - s) + ')\n'
+                            }
+                            return text + Math.round(params.data)
+                        }
+                    },
+                    tooltip:{
+                        formatter: function(params){
+                            // console.log(params, idx)
+                            if (idx == -1){
+                                return tech[params.dataIndex] + ':<br/>' + 
+                                       '- Capacity = ' + computeTechTotal(capacityData)[params.dataIndex].toFixed(1) + ' TWh<br/>' + 
+                                       '- Generation = ' + computeTechTotal(supplyData)[params.dataIndex].toFixed(1) + ' TWh' 
+                            }
+                            return '[' + supplyData[idx].name + '] ' + tech[params.dataIndex] + ':<br/>' + 
+                                   '- Capacity = ' + capacityData[idx].value[params.dataIndex].toFixed(1) + ' TWh<br/>' + 
+                                   '- Generation = ' + supplyData[idx].value[params.dataIndex].toFixed(1) + ' TWh'
+                        }
+                    },
+                    data: isNational ? computeTechTotal(supplyData) : supplyData[idx].value
+                }, {
+                    type: 'bar',
+                    stack: 'a',
+                    barWidth: SCALING*20,
+                    itemStyle: {
+                        opacity: 0
+                    },
+                    tooltip:{
+                        formatter: function(params){
+                            if (idx == -1){
+                                return tech[params.dataIndex] + ':<br/>' + 
+                                       '- Capacity = ' + computeTechTotal(capacityData)[params.dataIndex].toFixed(1) + ' TWh<br/>' + 
+                                       '- Generation = ' + computeTechTotal(supplyData)[params.dataIndex].toFixed(1) + ' TWh' 
+                            }
+                            return '[' + supplyData[idx].name + '] ' + tech[params.dataIndex] + ':<br/>' + 
+                                   '- Capacity = ' + capacityData[idx].value[params.dataIndex].toFixed(1) + ' TWh<br/>' + 
+                                   '- Generation = ' + supplyData[idx].value[params.dataIndex].toFixed(1) + ' TWh'
+                        }
+                    },
+                    data: Array(tech.length).fill(1000)
+                }
+            ]
+        }
+        // console.log(option)
+        barChart.setOption(option)
+        return barChart
+    }
+    
+    // make sankey plot - Intermittent
+    function plotISankeyChart(idx, isNational) {
+        var sankeyChart = echarts.init(document.getElementById('detail'))
+        var option = {
+            backgroundColor: 'rgba(255,255,255,.4)',
+            tooltip: {
+                trigger: 'item',
+                triggerOn: 'mousemove',
+                padding: SCALING*5,
+                textStyle:{
+                    fontSize: SCALING*14
+                }
+            },
+            series: [
+                {
+                    type: 'sankey',
+                    focusNodeAdjacency: 'allEdges',
+                    layoutIterations: 0,
+                    lineStyle:{
+                        curveness: 0.5
+                    },
+                    label:{
+                        distance: SCALING*5,
+                        fontSize: SCALING*12,
+                        formatter: function(params){
+                            if (params.name == 'Immediate usage'){
+                                return 'Immediate\nusage'
+                            }
+                        }
+                    },
+                    nodeGap: SCALING*15,
+                    nodeWidth: SCALING*20,
+                    height: isNational ? SCALING*computeFlowHeight(NIflowData, 0.0185, idx, isNational) : 
+                                         SCALING*computeFlowHeight(IflowData, 0.0185, idx, isNational),
+                    top: isNational ? ((1 - computeFlowHeight(NIflowData, 0.0185, idx, isNational)/300)/2*100).toString() + '%' : 
+                                      ((1 - computeFlowHeight(IflowData, 0.0185, idx, isNational)/300)/2*100).toString() + '%',
+                    itemStyle:{
+                        borderWidth: 0
+                    },
+                    right: '20%',
+                    tooltip:{
+                        formatter: function(params){
+                            // console.log(params)
+                            if (params.dataType == 'node'){
+                                var nodeInfo = isNational ? params.name + ' = ' + params.value.toFixed(1) + ' TWh' : '[' + supplyData[idx].name + '] ' + params.name + ' = ' + params.value.toFixed(1) + ' TWh'
+                                var flowInfo = isNational ? readIFlowData(NIflowData) : readIFlowData(IflowData[idx])
+                                if (params.name == 'Hydro'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    '&#8594; Generation = ' + flowInfo.h_g.toFixed(1) + '  TWh (' + (flowInfo.h_g/(flowInfo.h+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '&#8594; Curtailment = ' + flowInfo.h_c.toFixed(1) + ' TWh (' + (flowInfo.h_c/(flowInfo.h+1e-10)*100).toFixed(2) + '%)'
+                                } else if (params.name == 'Wind'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    '&#8594; Generation = ' + flowInfo.w_g.toFixed(1) + ' TWh (' + (flowInfo.w_g/(flowInfo.w+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '&#8594; Curtailment = ' + flowInfo.w_c.toFixed(1) + ' TWh (' + (flowInfo.w_c/(flowInfo.w+1e-10)*100).toFixed(2) + '%)'
+                                } else if (params.name == 'Solar'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    '&#8594; Generation = ' + flowInfo.s_g.toFixed(1) + ' TWh (' + (flowInfo.s_g/(flowInfo.s+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '&#8594; Curtailment = ' + flowInfo.s_c.toFixed(1) + ' TWh (' + (flowInfo.s_c/(flowInfo.s+1e-10)*100).toFixed(2) + '%)'
+                                } else if (params.name == 'Generation'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    'Hydro &#8594; = ' + flowInfo.h_g.toFixed(1) + ' TWh (' + (flowInfo.h_g/(flowInfo.g+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    'Wind &#8594; = ' + flowInfo.w_g.toFixed(1) + ' TWh (' + (flowInfo.w_g/(flowInfo.g+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    'Solar &#8594; = ' + flowInfo.s_g.toFixed(1) + ' TWh (' + (flowInfo.s_g/(flowInfo.g+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '&#8594; On grid = ' + flowInfo.g_n.toFixed(1) + ' TWh (' + (flowInfo.g_n/(flowInfo.g+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '&#8594; Immediate usage = ' + flowInfo.g_f.toFixed(1) + ' TWh (' + (flowInfo.g_f/(flowInfo.g+1e-10)*100).toFixed(2) + '%)'
+                                } else if (params.name == 'Curtailment'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    'hydro &#8594; = ' + flowInfo.h_c.toFixed(1) + ' TWh (' + (flowInfo.h_c/(flowInfo.c+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    'wind &#8594; = ' + flowInfo.w_c.toFixed(1) + ' TWh (' + (flowInfo.w_c/(flowInfo.c+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    'solar &#8594; = ' + flowInfo.s_c.toFixed(1) + ' TWh (' + (flowInfo.s_c/(flowInfo.c+1e-10)*100).toFixed(2) + '%)'
+                                }
+                                return nodeInfo
+                            }
+                            else{
+                                return isNational ? params.data.source + ' &#8594; ' + params.data.target + ' = ' + params.value.toFixed(1) + ' TWh' : '[' + supplyData[idx].name + '] ' + 
+                                                    params.data.source + ' &#8594; ' + params.data.target + ' = ' + params.value.toFixed(1) + ' TWh'
+                            }
+                        }
+                    },
+                    data: isNational ? NIflowData.data : IflowData[idx].data,
+                    links: isNational ? NIflowData.links : IflowData[idx].links
+                }
+            ]
+        }
+        sankeyChart.setOption(option, true)
+    }
+    
+    // make sankey plot - Carbon
+    function plotCSankeyChart(idx, isNational) {
+        var sankeyChart = echarts.init(document.getElementById('detail'))
+        var option = {
+            backgroundColor: 'rgba(255,255,255,.4)',
+            tooltip: {
+                trigger: 'item',
+                triggerOn: 'mousemove',
+                padding: SCALING*5,
+                textStyle:{
+                    fontSize: SCALING*14
+                }
+            },
+            series: [
+                {
+                    type: 'sankey',
+                    focusNodeAdjacency: 'allEdges',
+                    layoutIterations: 0,
+                    lineStyle:{
+                        curveness: 0.5
+                    },
+                    label:{
+                        distance: SCALING*5,
+                        fontSize: SCALING*12
+                    },
+                    nodeGap: SCALING*15,
+                    nodeWidth: SCALING*20,
+                    height: isNational ? SCALING*computeFlowHeight(NCflowData, 0.0869, idx, isNational) : 
+                                         SCALING*computeFlowHeight(CflowData, 0.0869, idx, isNational),
+                    top: isNational ? ((1 - computeFlowHeight(NCflowData, 0.0869, idx, isNational)/300)/2*100).toString() + '%' : 
+                                      ((1 - computeFlowHeight(CflowData, 0.0869, idx, isNational)/300)/2*100).toString() + '%',
+                    itemStyle:{
+                        borderWidth: 0
+                    },
+                    right: '20%',
+                    tooltip:{
+                        formatter: function(params){
+                            // console.log(params)
+                            if (params.dataType == 'node'){
+                                var nodeInfo = isNational ? params.name + ' = ' + params.value.toFixed(1) + ' Mt' : '[' + supplyData[idx].name + '] ' + params.name + ': ' + params.value.toFixed(1) + ' Mt'
+                                var flowInfo = isNational ? readCFlowData(NCflowData) : readCFlowData(CflowData[idx])
+                                if (params.name == 'Capture'){
+                                    nodeInfo = nodeInfo + '<br/>' +
+                                    'Coal-CCS &#8594; = ' + flowInfo.c_p.toFixed(1) + ' Mt (' + (flowInfo.c_p/(flowInfo.p+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    'Natural gas-CCS &#8594; = ' + flowInfo.g_p.toFixed(1) + ' Mt (' + (flowInfo.g_p/(flowInfo.p+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    'Biomass-CCS &#8594; = ' + flowInfo.b_p.toFixed(1) + ' Mt (' + (flowInfo.b_p/(flowInfo.p+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    // 'DAC &#8594; = ' + flowInfo.a_p.toFixed(1) + ' Mt (' + (flowInfo.a_p/(flowInfo.p+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '&#8594; Utilization = ' + flowInfo.p_u.toFixed(1) + ' Mt (' + (flowInfo.p_u/(flowInfo.p+1e-10)*100).toFixed(2) + '%)<br/>' +
+                                    '&#8594; Storage = ' + flowInfo.p_s.toFixed(1) + ' Mt (' + (flowInfo.p_s/(flowInfo.p+1e-10)*100).toFixed(2) + '%)'
+                                }
+                                return nodeInfo
+                            }
+                            else{
+                                return isNational ? params.data.source + ' &#8594; ' + params.data.target + ' = ' + params.value.toFixed(1) + ' Mt' : '[' + supplyData[idx].name + '] ' + 
+                                                    params.data.source + ' &#8594; ' + params.data.target + ' = ' + params.value.toFixed(1) + ' Mt'
+                            }
+                        }
+                    },
+                    data: isNational ? NCflowData.data : CflowData[idx].data,
+                    links: isNational ? NCflowData.links : CflowData[idx].links
+                }
+            ]
+        }
+        sankeyChart.setOption(option, true)
+    }
+    
+    // create cover layer
+    function creatWrap(){
+        var cover = document.createElement('div')
+        $(cover).addClass('cover').css({
+            width: '100%',
+            height: '100%',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            backgroundColor: 'rgba(0,0,0,.2)'
+        }).appendTo('.wrap')
+    }
+    
+    // get mouse position
+    function getMousePos(e) {
+        var e = event || window.event
+        var scrollX = document.documentElement.scrollLeft || document.body.scrollLeft
+        var scrollY = document.documentElement.scrollTop || document.body.scrollTop
+        var x = e.pageX || e.clientX + scrollX
+        var y = e.pageY || e.clientY + scrollY
+        // console.log(x,y)
+        return {'x': x,'y': y}
+    }
+    
+    // remove cover layer
+    function clearWrap(id){
+        $(id).click(function(e){
+            // console.log(this)
+            this.remove()
+            $('#detail').remove()
+            return false
+        })
+    }
+
+    function convertReferenceFrame(oldLength, newLength, relativePosition){
+        var oldR = Number(relativePosition.slice(0, relativePosition.indexOf('%')))/100
+        var newR = ((newLength - oldLength)/2 + oldLength*oldR)/newLength
+        return (newR*100).toString() + '%'
+    }
+
+    function computeTotal(supplyData){
+        return supplyData.reduce((tot, cur) => tot + cur.value.reduce((tot, cur) => tot + cur, 0), 0)
+    }
+
+    function formatTotalText(supplyData){
+        var text = computeTotal(supplyData).toFixed(1) + '\n'
+        for (var i = 0; i < Math.floor((Math.floor(Math.log10(computeTotal(supplyData))) + 1 + 2)/2) - 1; i++) {
+            text += ' '
+        }
+        return text + 'TWh'
+    }
+
+    function computeProvTotal(supplyData){
+        return supplyData.map(cur => ({name: cur.name, value: cur.value.reduce((tot, cur) => tot + cur, 0)}))
+    }
+
+    function computeTechTotal(supplyData){
+        var tot = Array(tech.length).fill(0)
+        for (var i = 0; i < supplyData.length; i++){
+            for (var j = 0; j < tech.length; j++){
+                tot[j] += supplyData[i].value[j]
+            }
+        }
+        return tot
+    }
+
+    function constructTechTotal(tot){
+        var data = []
+        for (var i = 0; i < tech.length; i++){
+            data.push({name: tech[i], value: tot[i]})
+        }
+        return data
+    }
+
+    function convertPointCoords(oldWindowHeight, oldWindowWidth, oldContainerHeight, oldContainerWidth,
+                                newWindowHeight, newWindowWidth, newContainerHeight, newContainerWidth, points){
+        return points.map(function(cur){
+            return [(cur[0] - (oldWindowWidth - oldContainerWidth)/2)/oldContainerWidth*newContainerWidth + (newWindowWidth - newContainerWidth)/2,
+                    (cur[1] - (oldWindowHeight - oldContainerHeight)/2)/oldContainerHeight*newContainerHeight + (newWindowHeight - newContainerHeight)/2]
+        })
+    }
+
+    function computeFlowHeight(flowData, scale, idx, isNational){
+        var data = isNational ? flowData.data : flowData[idx].data
+        var tot = data.reduce((tot, cur) => cur.depth == 0 ? tot + cur.value : tot, 0)
+        var num = data.reduce((tot, cur) => cur.depth == 0 ? tot + 1 : tot, 0)
+        return scale*tot + 15*(num - 1)
+    }
+
+    function readIFlowData(dataItem){
+        var h, w, s, g, c, n, f
+        var h_g, h_c, w_g, w_c, s_g, s_c, g_n, g_f
+        // console.log(dataItem)
+        for (var i = 0; i < dataItem.data.length; i++){
+            switch (dataItem.data[i].name){
+                case 'Hydro':
+                    h = dataItem.data[i].value
+                    break
+                case 'Wind':
+                    w = dataItem.data[i].value
+                    break
+                case 'Solar':
+                    s = dataItem.data[i].value
+                    break
+                case 'Generation':
+                    g = dataItem.data[i].value
+                    break
+                case 'On grid':
+                    n = dataItem.data[i].value
+                    break
+                case 'Immediate usage':
+                    f = dataItem.data[i].value
+                    break
+                case 'Curtailment':
+                    c = dataItem.data[i].value
+                    break
+            }
+        }
+        for (var i = 0; i < dataItem.links.length; i++){
+            if (dataItem.links[i].source == 'Hydro' && dataItem.links[i].target == 'Generation'){
+                h_g = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'Hydro' && dataItem.links[i].target == 'Curtailment'){
+                h_c = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'Wind' && dataItem.links[i].target == 'Generation'){
+                w_g = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'Wind' && dataItem.links[i].target == 'Curtailment'){
+                w_c = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'Solar' && dataItem.links[i].target == 'Generation'){
+                s_g = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'Solar' && dataItem.links[i].target == 'Curtailment'){
+                s_c = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'Generation' && dataItem.links[i].target == 'On grid'){
+                g_n = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'Generation' && dataItem.links[i].target == 'Immediate usage'){
+                g_f = dataItem.links[i].value
+            }
+        }
+        h = h || 0, w = w || 0, s = s || 0, g = g || 0, c = c || 0, n = n || 0, f = f || 0, 
+        h_g = h_g || 0, h_c = h_c || 0, w_g = w_g || 0, w_c = w_c || 0, s_g = s_g || 0, s_c = s_c || 0, g_n = g_n || 0, g_f = g_f || 0
+        return {h: h, w: w, s: s, c: c, g: g, n: n, f: f, h_g: h_g, h_c: h_c, w_g: w_g, w_c: w_c, s_g: s_g, s_c: s_c, g_n: g_n, g_f: g_f}
+    }
+
+    function readCFlowData(dataItem){
+        var c, g, b, a, p, u, s
+        var c_p, g_p, b_p, a_p, p_u, p_s
+        // console.log(dataItem)
+        for (var i = 0; i < dataItem.data.length; i++){
+            switch (dataItem.data[i].name){
+                case 'Coal-CCS':
+                    c = dataItem.data[i].value
+                    break
+                case 'Natural gas-CCS':
+                    g = dataItem.data[i].value
+                    break
+                case 'Biomass-CCS':
+                    b = dataItem.data[i].value
+                    break
+                case 'DAC':
+                    a = dataItem.data[i].value
+                    break
+                case 'Capture':
+                    p = dataItem.data[i].value
+                    break
+                case 'Utilization':
+                    u = dataItem.data[i].value
+                    break
+                case 'Storage':
+                    s = dataItem.data[i].value
+                    break
+            }
+        }
+        for (var i = 0; i < dataItem.links.length; i++){
+            if (dataItem.links[i].source == 'Coal-CCS' && dataItem.links[i].target == 'Capture'){
+                c_p = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'Natural gas-CCS' && dataItem.links[i].target == 'Capture'){
+                g_p = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'Biomass-CCS' && dataItem.links[i].target == 'Capture'){
+                b_p = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'DAC' && dataItem.links[i].target == 'Capture'){
+                a_p = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'Capture' && dataItem.links[i].target == 'Utilization'){
+                p_u = dataItem.links[i].value
+            } else if (dataItem.links[i].source == 'Capture' && dataItem.links[i].target == 'Storage'){
+                p_s = dataItem.links[i].value
+            }
+        }
+        c = c || 0, g = g || 0, b = b || 0, a = a || 0, p = p || 0, u = u || 0, s = s || 0
+        c_p = c_p || 0, g_p = g_p || 0, b_p = b_p || 0, a_p = a_p || 0, p_u = p_u || 0, p_s = p_s || 0 
+        return {c: c, g: g, b: b, a: a, p: p, u: u, s: s, c_p: c_p, g_p: g_p, b_p: b_p, a_p: a_p, p_u: p_u, p_s: p_s}
+    }
+
+
+    </script>
+</body>
+</html>
+
+<style type="text/css">
+    body {
+        margin: 0;
+    }
+</style>
