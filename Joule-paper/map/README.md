@@ -1,5 +1,7 @@
 ## To use the visualization:
 <ol>
+   <li>Download everything into the same directory</li>
+   
    <li>Open a html file in a browser:
       <ul>
          <li>transmission.html for energy transmission</li>
