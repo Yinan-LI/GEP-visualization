@@ -1,6 +1,6 @@
 ## To use the visualization:
 <ol>
-   <li>Download everything into the same directory</li>
+   <li>Download everything into the same (local) directory on a computer</li>
    
    <li>Open a html file in a browser:
       <ul>
