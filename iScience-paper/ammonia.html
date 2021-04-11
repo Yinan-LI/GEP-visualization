@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ammonia</title>
+
+    <script src="lib/jquery.js"></script>
+    <script src="lib/echarts.min.js"></script>
+    <script src="lib/china.js"></script>
+
+    <script type="text/javascript" src="lib/P_name.js"></script>
+    <script type="text/javascript" src="lib/P_coordinate_area.js"></script>
+    <script type="text/javascript" src="ammonia_result.js"></script>
+    <script type="text/javascript" src="ammonia_color.js"></script>
+</head>
+<body>
+    <div class="wrap" style="position: relative;"></div>
+    
+    <script>
+    year = prompt('Please enter a year from 2018 to 2060:')
+    while (year < 2018 || year > 2060){
+        year = prompt('Please enter a year from 2018 to 2060:')
+    }
+    // year = 2060
+    
+    const mapAspectRatio = 0.75
+
+    var windowHeight = window.innerHeight
+    var windowWidth = window.innerWidth
+    var containerHeight
+    var containerWidth
+    if (windowHeight/windowWidth > mapAspectRatio) {
+        containerWidth = windowWidth
+        containerHeight = containerWidth*mapAspectRatio
+    } else {
+        containerHeight = windowHeight
+        containerWidth = containerHeight/mapAspectRatio
+    }
+
+    const SCALING = containerHeight/722
+
+    var mapContainer = document.createElement('div')
+    mapContainer.id = 'map'
+    $(mapContainer).css({
+        'width': Math.max(windowWidth, containerWidth),
+        'height': Math.max(windowHeight, containerHeight),
+        'margin': 'auto'
+    }).appendTo('.wrap')
+
+    var myChart = echarts.init(document.getElementById('map'))
+    
+    var nameMap = nameJson
+    var geoCoordMap = coordinateJson
+
+    var supplyData = resultJson[year].supply
+    var capacityData = resultJson[year].capacity
+
+    var tech =      ['Coal',    'Coke-oven gas', 'Natural gas', 'Nitrogen']
+    var colorList = ['#546570', '#835c3b',       '#c23531',     '#17becf']
+
+    var option = {
+        tooltip: {
+            trigger: 'item',
+            padding: SCALING*5,
+            textStyle:{
+                fontSize: SCALING*14
+            }
+        },
+        geo: {
+            map: 'china',
+            roam: true,
+            zoom: 1,
+            aspectScale: mapAspectRatio,
+            zlevel: 1,
+            label: {
+                emphasis: {
+                    show: false,
+                }
+            },
+            itemStyle: {
+                normal: {
+                    areaColor: 'lightGray',
+                    borderColor: 'white',
+                    borderWidth: SCALING*0.75
+                },
+                emphasis: {
+                    areaColor: 'gray'
+                }
+            },
+            nameMap: nameMap
+        },
+        visualMap: {
+            min: 0,
+            max: 50,
+            left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+            bottom: convertReferenceFrame(containerHeight, windowHeight, '2.5%'),
+            itemHeight: SCALING*500,
+            itemWidth: SCALING*25,
+            padding: 0,
+            show : true,
+            calculable: true,
+            seriesIndex: 0,
+            // color from large to small
+            color: colorMap.reverse(),
+            textStyle:{
+                color: 'black',
+                fontSize: SCALING*12
+            }
+        },
+        title:{
+            show: true,
+            text: 'Chemical sector - ammonia: ' + year,
+            textStyle:{
+                color: 'black',
+                fontSize: SCALING*18
+            },
+            left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+            top: convertReferenceFrame(containerHeight, windowHeight, '4.5%'),
+            padding: 0
+        },
+        graphic:{
+            elements:[
+                {
+                    type: 'text',
+                    left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+                    bottom: convertReferenceFrame(containerHeight, windowHeight, '77%'),
+                    style:{
+                        text: 'Total production (Mt)',
+                        font: 'normal ' + SCALING*14 + 'px sans-serif'
+                    }
+                },{
+                    type: 'text',
+                    left: convertReferenceFrame(containerWidth, windowWidth, '9.5%'),
+                    bottom: convertReferenceFrame(containerHeight, windowHeight, ((722*0.025 + 12 + 10/50*500 + 1)/722*100).toString() + '%'),
+                    style:{
+                        text: '10',
+                        font: 'normal ' + SCALING*12 + 'px sans-serif'
+                    }
+                },{
+                    type: 'polygon',
+                    shape:{
+                        points: convertPointCoords(722, 1536, 722, 962.67, windowHeight, windowWidth, containerHeight, containerWidth, 
+                            [[360, 722 - (722*0.025 + 12 + 10/50*500)],
+                             [360 + 14, 722 - (722*0.025 + 12 + 10/50*500)],
+                             [360 + 14, 722 - (722*0.025 + 12 + 10/50*500) - 14]])
+                    },
+                    style:{
+                        fill: 'rgba(47.02346041055718, 147.63049853372434, 77.42033235581623, 1.0)'
+                    }
+                },{
+                    type: 'text',
+                    left: convertReferenceFrame(containerWidth, windowWidth, '9.5%'),
+                    bottom: convertReferenceFrame(containerHeight, windowHeight, ((722*0.025 + 12 + 5/50*500 - 6)/722*100).toString() + '%'),
+                    style:{
+                        text: '5',
+                        font: 'normal ' + SCALING*12 + 'px sans-serif'
+                    }
+                },{
+                    type: 'polygon',
+                    shape:{
+                        points: convertPointCoords(722, 1536, 722, 962.67, windowHeight, windowWidth, containerHeight, containerWidth, 
+                            [[360, 722 - (722*0.025 + 12 + 5/50*500)],
+                             [360 + 14, 722 - (722*0.025 + 12 + 5/50*500) + 7],
+                             [360 + 14, 722 - (722*0.025 + 12 + 5/50*500) - 7]])
+                    },
+                    style:{
+                        fill: 'rgba(178.3763440860215, 223.32160312805476, 144.56598240469208, 1.0)'
+                    }
+                },{
+                    type: 'text',
+                    left: convertReferenceFrame(containerWidth, windowWidth, '24%'),
+                    bottom: convertReferenceFrame(containerHeight, windowHeight, '12.5%'),
+                    style:{
+                        text: computeTotal(supplyData).toFixed(1) + ' Mt',
+                        font: 'normal ' + SCALING*16 + 'px sans-serif'
+                    }
+                }
+            ]
+        },
+        legend: {
+            show: true,
+            data: [{name: 'Coal', icon: 'roundRect'},
+                   {name: 'Coke-oven gas', icon: 'roundRect'},
+                   {name: 'Natural gas', icon: 'roundRect'},
+                   {name: 'Nitrogen', icon: 'roundRect'}],
+            left: convertReferenceFrame(containerWidth, windowWidth, '5%'),
+            top: convertReferenceFrame(containerHeight, windowHeight, '10%'),
+            padding: 0,
+            itemGap: SCALING*10,
+            itemWidth: SCALING*25,
+            itemHeight: SCALING*14,
+            textStyle:{
+                color: 'black',
+                fontSize: SCALING*14
+            },
+
+        },
+        series: []
+    }
+
+    myChart.setOption(option)
+
+    function renderEachCity() {
+        var option = {
+            series: [{
+                name: 'area',
+                type: 'map',
+                map: 'china',
+                geoIndex: 0,
+                tooltip:{
+                    formatter: function(params){
+                        // console.log(params)
+                        // return '[' + params.name + '] Total production: ' + params.value.toFixed(1) + ' Mt'
+                        return
+                    }
+                },
+                data: computeProvTotal(supplyData)
+            },{
+                type: 'pie',
+                radius: [SCALING*50, SCALING*75],
+                center: [convertReferenceFrame(containerWidth, windowWidth, '27%'), 
+                         convertReferenceFrame(containerHeight, windowHeight, '86%')],
+                label:{
+                    show: false
+                },
+                labelLine:{
+                    show: false
+                },
+                itemStyle:{
+                    color: function(params){
+                        return colorList[params.dataIndex]
+                    }
+                },
+                tooltip:{
+                    formatter: function(params){
+                        // console.log(params)
+                        return tech[params.dataIndex] + ' = ' + params.value.toFixed(1) + ' Mt (' + params.percent.toFixed(2) + '%)'
+                    }
+                },
+                animation: false,
+                data: constructTechTotal(computeTechTotal(supplyData))
+            }]
+        }
+
+        // console.log(myChart.getOption().geo[0].zoom)
+        var zoomScale = myChart.getOption().geo[0].zoom
+
+        echarts.util.each(supplyData, function(dataItem, idx) {
+            
+            var geoCoord = geoCoordMap[dataItem.name]
+            var coord = myChart.convertToPixel('geo', geoCoord)
+
+            option.series.push({
+                type: 'pie',
+                radius: Math.round(dataItem.value.reduce((tot, cur) => tot + cur, 0)) > 0 ? //SCALING*16*zoomScale : 0,
+                        SCALING*Math.sqrt(dataItem.value.reduce((tot, cur) => tot + cur, 0)*21 + 100)*zoomScale : 0,
+                center: coord,
+                zlevel: 2,
+                label:{
+                    show: false
+                },
+                labelLine:{
+                    show: false
+                },
+                itemStyle:{
+                    color: function(params){
+                        return colorList[params.dataIndex]
+                    }
+                },
+                tooltip:{
+                    formatter: function(params){
+                        // console.log(params)
+                        return '[' + supplyData[params.seriesIndex - 2].name + '] ' + tech[params.dataIndex] + ' = ' + 
+                                params.data.toFixed(1) + ' Mt (' + params.percent.toFixed(2) + '%)'
+                    }
+                },
+                animation: false,
+                data: dataItem.value
+            })
+        })
+        console.time('a')
+        myChart.setOption(option)
+        console.timeEnd('a')
+    }
+
+    setTimeout(renderEachCity, 0)
+    
+
+    // zoom and drag of map
+    function throttle(fn, delay, debounce) {
+
+        var currCall
+        var lastCall = 0
+        var lastExec = 0
+        var timer = null
+        var diff
+        var scope
+        var args
+
+        delay = delay || 0
+
+        function exec() {
+            lastExec = (new Date()).getTime()
+            timer = null
+            fn.apply(scope, args || [])
+        }
+
+        var cb = function() {
+            currCall = (new Date()).getTime()
+            scope = this
+            args = arguments
+            diff = currCall - (debounce ? lastCall : lastExec) - delay
+
+            clearTimeout(timer)
+
+            if (debounce) {
+                timer = setTimeout(exec, delay)
+            } else {
+                if (diff >= 0) {
+                    exec()
+                } else {
+                    timer = setTimeout(exec, -diff)
+                }
+            }
+
+            lastCall = currCall
+        }
+
+        return cb
+    }
+
+    var throttledRenderEachCity = throttle(renderEachCity, 0)
+    myChart.on('geoRoam', throttledRenderEachCity)
+
+
+    // click pie/map to show bar plot
+    myChart.on('click', function(e){
+        // console.log(e)
+        if(e.componentSubType == "pie" || e.componentSubType == "map"){
+            var idx = e.componentSubType == "pie" ? e.seriesIndex - 2 : e.dataIndex
+            // console.log(idx)
+            var isNational = false
+            if (idx == -1){
+                if (e.componentSubType == "pie"){
+                    isNational = true
+                }
+                else{
+                    return
+                }
+            }
+            // create cover layer
+            creatWrap()
+            // create container for bar/sankey plot
+            var divObj = document.createElement('div')
+            divObj.id = 'detail'
+            var divX = getMousePos()['x']
+            var divY = getMousePos()['y']
+            $(divObj).css({
+                'width': SCALING*400,
+                'height': SCALING*300,
+                'border': SCALING*1 + 'px solid #ccc',
+                'position': 'absolute',
+                'top': isNational ? divY - SCALING*300 : divY,
+                'left': divX
+            }).appendTo('.wrap')
+            // make bar plot
+            plotBarChart(idx, isNational)
+            // remove cover layer (and detailed plot)
+            clearWrap('.cover')
+        }
+        return
+    })
+
+    // make bar plot
+    function plotBarChart(idx, isNational) {
+        var barChart = echarts.init(document.getElementById('detail'))
+        var option = {
+            backgroundColor: 'rgba(255,255,255,.6)',
+            tooltip: {
+                trigger: 'item',
+                triggerOn: 'mousemove',
+                padding: SCALING*5,
+                textStyle:{
+                    fontSize: SCALING*14
+                }
+            },
+            grid:{
+                left: '15%',
+                right: '5%',
+                top: '20%',
+                bottom: '10%'
+            },
+            xAxis: [
+                {
+                    type: 'category',
+                    data: ['A1','A2','A3','A4'],
+                    axisLabel:{
+                        fontSize: SCALING*12,
+                        margin: SCALING*8
+                    },
+                    axisLine:{
+                        lineStyle:{
+                            width: SCALING*1
+                        }
+                    },
+                    axisTick:{
+                        length: SCALING*5,
+                        lineStyle:{
+                            width: SCALING*1
+                        }
+                    }
+                }
+            ],
+            yAxis: [
+                {
+                    splitLine: {
+                        show: false
+                    },
+                    type: 'value',
+                    min: 0,
+                    max: 60,
+                    interval: 10,
+                    name: 'Ammonia (Mt)',
+                    nameLocation: 'end',
+                    nameGap: SCALING*18,
+                    nameTextStyle:{
+                        fontStyle: 'bold',
+                        fontSize: SCALING*12
+                    },
+                    axisLabel:{
+                        fontSize: SCALING*12,
+                        margin: SCALING*8
+                    },
+                    axisLine:{
+                        lineStyle:{
+                            width: SCALING*1
+                        }
+                    },
+                    axisTick:{
+                        length: SCALING*5,
+                        lineStyle:{
+                            width: SCALING*1
+                        }
+                    }
+                }
+            ],
+            series: [
+                {
+                    type: 'bar',
+                    stack: 'a',
+                    barWidth: SCALING*20,
+                    itemStyle: {
+                        color: function(params){
+                            return colorList[params.dataIndex]
+                        }
+                    },
+                    label: {
+                        show: true,
+                        position: 'top',
+                        fontSize: SCALING*8,
+                        textStyle: {
+                            color: 'black'
+                        },
+                        formatter: function(params){
+                            // console.log(params, idx)
+                            var c = idx == -1 ? computeTechTotal(capacityData)[params.dataIndex] : capacityData[idx].value[params.dataIndex]
+                            var s = idx == -1 ? computeTechTotal(supplyData)[params.dataIndex] : supplyData[idx].value[params.dataIndex]
+                            var text = ''
+                            if (Math.round(c) - Math.round(s) > 0){
+                                text += '(' + Math.round(c - s) + ')\n'
+                            }
+                            return text + Math.round(params.data)
+                        }
+                    },
+                    tooltip:{
+                        formatter: function(params){
+                            // console.log(params, idx)
+                            if (idx == -1){
+                                return tech[params.dataIndex] + ':<br/>' + 
+                                       '- Capacity = ' + computeTechTotal(capacityData)[params.dataIndex].toFixed(1) + ' Mt<br/>' + 
+                                       '- Production = ' + computeTechTotal(supplyData)[params.dataIndex].toFixed(1) + ' Mt' 
+                            }
+                            return '[' + supplyData[idx].name + '] ' + tech[params.dataIndex] + ':<br/>' + 
+                                   '- Capacity = ' + capacityData[idx].value[params.dataIndex].toFixed(1) + ' Mt<br/>' + 
+                                   '- Production = ' + supplyData[idx].value[params.dataIndex].toFixed(1) + ' Mt'
+                        }
+                    },
+                    data: isNational ? computeTechTotal(supplyData) : supplyData[idx].value
+                }, {
+                    type: 'bar',
+                    stack: 'a',
+                    barWidth: SCALING*20,
+                    itemStyle: {
+                        opacity: 0
+                    },
+                    tooltip:{
+                        formatter: function(params){
+                            if (idx == -1){
+                                return tech[params.dataIndex] + ':<br/>' + 
+                                       '- Capacity = ' + computeTechTotal(capacityData)[params.dataIndex].toFixed(1) + ' Mt<br/>' + 
+                                       '- Production = ' + computeTechTotal(supplyData)[params.dataIndex].toFixed(1) + ' Mt' 
+                            }
+                            return '[' + supplyData[idx].name + '] ' + tech[params.dataIndex] + ':<br/>' + 
+                                   '- Capacity = ' + capacityData[idx].value[params.dataIndex].toFixed(1) + ' Mt<br/>' + 
+                                   '- Production = ' + supplyData[idx].value[params.dataIndex].toFixed(1) + ' Mt'
+                        }
+                    },
+                    data: Array(tech.length).fill(10)
+                }
+            ]
+        }
+        barChart.setOption(option)
+        return barChart
+    }
+    
+    // create cover layer
+    function creatWrap(){
+        var cover = document.createElement('div')
+        $(cover).addClass('cover').css({
+            width: '100%',
+            height: '100%',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            backgroundColor: 'rgba(0,0,0,.2)'
+        }).appendTo('.wrap')
+    }
+    
+    // get mouse position
+    function getMousePos(e) {
+        var e = event || window.event
+        var scrollX = document.documentElement.scrollLeft || document.body.scrollLeft
+        var scrollY = document.documentElement.scrollTop || document.body.scrollTop
+        var x = e.pageX || e.clientX + scrollX
+        var y = e.pageY || e.clientY + scrollY
+        // console.log(x,y)
+        return {'x': x,'y': y}
+    }
+    
+    // remove cover layer
+    function clearWrap(id){
+        $(id).click(function(e){
+            // console.log(this)
+            this.remove()
+            $('#detail').remove()
+            return false
+        })
+    }
+
+    function convertReferenceFrame(oldLength, newLength, relativePosition){
+        var oldR = Number(relativePosition.slice(0, relativePosition.indexOf('%')))/100
+        var newR = ((newLength - oldLength)/2 + oldLength*oldR)/newLength
+        return (newR*100).toString() + '%'
+    }
+
+    function computeTotal(supplyData){
+        return supplyData.reduce((tot, cur) => tot + cur.value.reduce((tot, cur) => tot + cur, 0), 0)
+    }
+
+    function computeProvTotal(supplyData){
+        return supplyData.map(cur => ({name: cur.name, value: cur.value.reduce((tot, cur) => tot + cur, 0)}))
+    }
+
+    function computeTechTotal(supplyData){
+        var tot = Array(tech.length).fill(0)
+        for (var i = 0; i < supplyData.length; i++){
+            for (var j = 0; j < tech.length; j++){
+                tot[j] += supplyData[i].value[j]
+            }
+        }
+        return tot
+    }
+
+    function constructTechTotal(tot){
+        var data = []
+        for (var i = 0; i < tech.length; i++){
+            data.push({name: tech[i], value: tot[i]})
+        }
+        return data
+    }
+
+    function convertPointCoords(oldWindowHeight, oldWindowWidth, oldContainerHeight, oldContainerWidth,
+                                newWindowHeight, newWindowWidth, newContainerHeight, newContainerWidth, points){
+        return points.map(function(cur){
+            return [(cur[0] - (oldWindowWidth - oldContainerWidth)/2)/oldContainerWidth*newContainerWidth + (newWindowWidth - newContainerWidth)/2,
+                    (cur[1] - (oldWindowHeight - oldContainerHeight)/2)/oldContainerHeight*newContainerHeight + (newWindowHeight - newContainerHeight)/2]
+        })
+    }
+
+
+    </script>
+</body>
+</html>
+
+<style type="text/css">
+    body {
+        margin: 0;
+    }
+</style>
