@@ -252,8 +252,9 @@
 
             option.series.push({
                 type: 'pie',
-                radius: Math.round(dataItem.value.reduce((tot, cur) => tot + cur, 0)) > 0 ? //SCALING*16*zoomScale : 0,
-                        SCALING*Math.sqrt(dataItem.value.reduce((tot, cur) => tot + cur, 0)*7 + 100)*zoomScale : 0,
+                radius: Math.round(dataItem.value.reduce((tot, cur) => tot + cur, 0)) > 0 ? SCALING*12*zoomScale : 0,
+                        // SCALING*16*zoomScale : 0,
+                        // SCALING*Math.sqrt(dataItem.value.reduce((tot, cur) => tot + cur, 0)*7 + 100)*zoomScale : 0,
                 center: coord,
                 zlevel: 2,
                 label:{
