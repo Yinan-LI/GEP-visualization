@@ -277,17 +277,13 @@
             coords: [geoCoordMap[dataItem.from], geoCoordMap[dataItem.to]],
             value: dataItem.grid + dataItem.road,
             info: [dataItem.from, dataItem.to, dataItem.grid, dataItem.road],
-            symbolSize: SCALING*12,
-            // SCALING*16,
-            // SCALING*((dataItem.grid + dataItem.road)/1000 + 3)*2,
+            symbolSize: SCALING*((dataItem.grid + dataItem.road)/1000 + 3)*2,//SCALING*16,
             lineStyle:{
-                width: SCALING*6,
-                // SCALING*8,
-                // SCALING*((dataItem.grid + dataItem.road)/1000 + 3),
+                width: SCALING*((dataItem.grid + dataItem.road)/1000 + 3),//SCALING*8,
                 curveness: (dataItem.from == 'LN' && dataItem.to == 'HB') ?  0.35 : 
                            (dataItem.from == 'HB' && dataItem.to == 'LN') ? -0.35 :
-                           (dataItem.from == 'GS' && dataItem.to == 'NM') ?  0.35 :
-                           (dataItem.from == 'NM' && dataItem.to == 'GS') ? -0.35 : 0
+                           (dataItem.from == 'GS' && dataItem.to == 'NM') ?  0.25 :
+                           (dataItem.from == 'NM' && dataItem.to == 'GS') ? -0.25 : 0
             }
         })
     }
@@ -300,8 +296,8 @@
                 width: 0,
                 curveness: (dataItem.from == 'LN' && dataItem.to == 'HB') ?  0.35 : 
                            (dataItem.from == 'HB' && dataItem.to == 'LN') ? -0.35 :
-                           (dataItem.from == 'GS' && dataItem.to == 'NM') ?  0.35 :
-                           (dataItem.from == 'NM' && dataItem.to == 'GS') ? -0.35 : 0
+                           (dataItem.from == 'GS' && dataItem.to == 'NM') ?  0.25 :
+                           (dataItem.from == 'NM' && dataItem.to == 'GS') ? -0.25 : 0
             },
             label:{
                 formatter: function(params){
@@ -323,8 +319,8 @@
                 width: 0,
                 curveness: (dataItem.from == 'LN' && dataItem.to == 'HB') ?  0.35 : 
                            (dataItem.from == 'HB' && dataItem.to == 'LN') ? -0.35 :
-                           (dataItem.from == 'GS' && dataItem.to == 'NM') ?  0.35 :
-                           (dataItem.from == 'NM' && dataItem.to == 'GS') ? -0.35 : 0  
+                           (dataItem.from == 'GS' && dataItem.to == 'NM') ?  0.25 :
+                           (dataItem.from == 'NM' && dataItem.to == 'GS') ? -0.25 : 0  
             },
             label:{
                 formatter: function(params){
